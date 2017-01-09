@@ -87,3 +87,8 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+data/
+private/
+logs/config.txt
+logs/*.log
