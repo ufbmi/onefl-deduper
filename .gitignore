@@ -92,3 +92,4 @@ data/
 private/
 logs/config.txt
 logs/*.log
+tests/data_out/

@@ -1,0 +1,17 @@
+patid	first	last	dob	gender	race
+01	aly	bee	1910-01-01	f	white
+02	aly	cee	1910-01-01	f	white
+03	aly	dee	1910-01-01	f	white
+
+04	Aly	Bee	1910-01-01	f	asian
+05	aly	Cee	1910-01-01	f	asian
+06	aly	Dee	1910-01-01	f	asian
+
+07	bob	dee	1900-02-02	m	black
+08	bob	dee	1901-02-03	m	black
+09	Bob	Dee	1901-02-03	m	Hawaiian
+
+10	bob	dee	1900-02-03	a	Hawaiian
+11	bob	dee	1901-02-03	ni	Hawaiian
+12	Bob	Dee	1901-02-03	un	Hawaiian
+13	Bob	Dee	1901-02-03	OT	Hawaiian
