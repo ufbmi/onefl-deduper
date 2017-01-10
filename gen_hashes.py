@@ -11,6 +11,7 @@ import argparse
 from datetime import timedelta
 from onefl import logutils
 from onefl.hash_generator import HashGenerator
+from onefl.normalized_patient import NormalizedPatient
 logger = logutils.get_a_logger(__file__)
 
 
@@ -25,6 +26,7 @@ def main():
 
     """
     HashGenerator.configure_logger(logger)
+    NormalizedPatient.configure_logger(logger)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-i', '--inputdir',

@@ -88,6 +88,7 @@ ENV/
 # Rope project settings
 .ropeproject
 
+*.swp
 data/
 private/
 logs/config.txt

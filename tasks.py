@@ -27,7 +27,11 @@ def prep_develop(ctx):
 @task(aliases=['go'])
 def gen_hashes(ctx):
     """ Generate hashes from PHI """
-    ctx.run('PYTHONPATH=. python gen_hashes.py -i data -o data')
+    inputfolder = 'data'
+    outputfolder = 'data'
+
+    ctx.run('PYTHONPATH=. python gen_hashes.py -i {} -o {} '
+            .format(inputfolder, outputfolder))
 
 
 @task
