@@ -5,10 +5,9 @@ Goal: store utility functions not specific to a module
     Andrei Sura <sura.andrei@gmail.com>
 """
 import pandas as pd
-# import os
+import os
 import sys
 import unicodedata
-# import sqlalchemy as db
 # import hashlib
 # import uuid
 from hashlib import sha256
@@ -18,10 +17,14 @@ from csv import QUOTE_NONE, QUOTE_ALL  # noqa
 # from datetime import timedelta
 # from datetime import datetime
 # from base64 import b64decode, b64encode
+from datetime import datetime
+from datetime import date
+
 from onefl import logutils
-logger = logutils.get_a_logger(__file__)
+log = logutils.get_a_logger(__file__)
 
 
+FORMAT_DATABASE_DATE = "%Y-%m-%d"
 # import locale
 # locale.setlocale(locale.LC_ALL, 'en_US')
 ESCAPECHAR = '\\'
@@ -51,6 +54,71 @@ def apply_sha256(val):
     m = sha256()
     m.update(val.encode('utf-8'))
     return m.hexdigest()
+
+
+def format_date_as_string(val, fmt='%m-%d-%Y'):
+    """
+    :rtype str:
+    :return the input value formatted as '%Y-%m-%d'
+
+    :param val: datetime or string
+    :param fmt: the input format for the date
+    """
+    if isinstance(val, date):
+        return val.strftime(fmt)
+
+    da = format_date(val, fmt)
+
+    if not da:
+        return ''
+
+    return da.strftime(FORMAT_DATABASE_DATE)
+
+
+def format_date(val, fmt='%m-%d-%Y'):
+    """
+    Transform the input string to a datetime object
+
+    :param val: the input string for date
+    :param fmt: the input format for the date
+    """
+    date_obj = None
+
+    try:
+        date_obj = datetime.strptime(val, fmt)
+    except Exception as exc:
+        log.warning("Problem formatting date: {} - {} due: {}"
+                    .format(val, fmt, exc))
+
+    return date_obj
+
+
+def get_file_size(file_name):
+    """
+    :rtype numeric: the number of bytes in a file
+    """
+    bytes = os.path.getsize(file_name)
+    return humanize_bytes(bytes)
+
+
+def humanize_bytes(bytes, precision=1):
+    """Return a humanized string representation of a number of bytes."""
+    # This was stollen from http://code.activestate.com/recipes/577081/
+    abbrevs = (
+        (1 << 50, 'PB'),
+        (1 << 40, 'TB'),
+        (1 << 30, 'GB'),
+        (1 << 20, 'MB'),
+        (1 << 10, 'kB'),
+        (1, 'bytes')
+    )
+    if bytes == 1:
+        return '1 byte'
+
+    for factor, suffix in abbrevs:
+        if bytes >= factor:
+            break
+    return '%.*f %s' % (precision, bytes / factor, suffix)
 
 
 def frame_from_file(file_name,
@@ -100,8 +168,8 @@ def frame_to_file(df, file_name, delimiter="|"):
     Store the dataframe to a file
     """
     if "|" == delimiter:
-        logger.warning("Writing frame {} using the default (|) delimiter"
-                       .format(file_name))
+        log.warning("Writing frame {} using the default (|) delimiter"
+                    .format(file_name))
 
     try:
         df.to_csv(file_name,
@@ -111,6 +179,6 @@ def frame_to_file(df, file_name, delimiter="|"):
                   quoting=QUOTE_NONE,
                   encoding='utf-8')
     except Exception as exc:
-        logger.error("Unable to write frame due: {}".format(exc))
+        log.error("Unable to write frame due: {}".format(exc))
 
     return True
