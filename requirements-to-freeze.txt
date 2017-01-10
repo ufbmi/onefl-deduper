@@ -1,0 +1,15 @@
+# Store the output of
+#   $ pip freeze
+# after
+#   $ pip install -r requirements-to-freeze.txt --upgrade
+#
+# Note: use this file for deployment (aka: to avoid problemZ)
+# @see http://www.kennethreitz.org/essays/a-better-pip-workflow
+
+
+invoke==0.14.0
+mock==2.0.0
+pandas==0.19.2
+pylint==1.6.4
+pytest-cov==2.4.0
+tox==2.5.0

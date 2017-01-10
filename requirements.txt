@@ -1,0 +1,15 @@
+# Specify top-level dependencies (without versions), and any explicit versions.
+#
+# Note: use this file during development
+# @see http://www.kennethreitz.org/essays/a-better-pip-workflow
+
+
+
+
+
+invoke
+mock
+pandas
+pylint
+pytest-cov
+tox
