@@ -10,11 +10,16 @@ import time
 import argparse
 from datetime import timedelta
 from onefl import logutils
+from onefl.config import Config
 from onefl.hash_generator import HashGenerator
 from onefl.normalized_patient import NormalizedPatient
 from onefl.version import __version__
 
 logger = logutils.get_a_logger(__file__)
+
+# The config file is looked up relative to this "root" folder
+ROOT_PATH = '.'
+DEFAULT_SETTINGS_FILE = 'config/settings.py'
 
 
 def main():
@@ -35,6 +40,10 @@ def main():
                         default=False,
                         action='store_true',
                         help="Show the version number")
+
+    parser.add_argument("-c", "--config",
+                        default=DEFAULT_SETTINGS_FILE,
+                        help="Application config file")
     parser.add_argument(
         '-i', '--inputdir',
         # required=True,
@@ -53,8 +62,10 @@ def main():
         print("deduper, version {}".format(__version__))
         sys.exit()
 
+    config = Config(root_path=ROOT_PATH, defaults={})
+    config.from_pyfile(args.config)
     start = time.monotonic()
-    success = HashGenerator.generate(args.inputdir, args.outputdir)
+    success = HashGenerator.generate(config, args.inputdir, args.outputdir)
     end = time.monotonic()
     elapsed = (end - start)
 
