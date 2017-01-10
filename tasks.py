@@ -65,6 +65,50 @@ def coverage_html(ctx):
 
 
 @task
+def sdist(ctx):
+    """ Run the installation """
+    ctx.run("python setup.py sdist")
+
+
+@task
+def pypi_check_config(ctx):
+    ctx.run("echo 'Check the presence of the ~/.pypirc config file'")
+    ctx.run("test -f ~/.pypirc || echo 'Please create the ~/.pypirc file. "
+            "Here is a template: \n'", echo=False)
+    ctx.run("(test -f ~/.pypirc && echo "")|| (cat config/pypirc && exit 1)", echo=False)
+
+
+@task(pre=[pypi_check_config])
+def pypi_register(ctx):
+    """ Use the ~/.pypirc config to register the package """
+    ctx.run("python setup.py register -r deduper")
+
+
+@task(pre=[pypi_check_config])
+def pypi_upload(ctx):
+    """ Use the ~/.pypirc config to upload the package """
+    ctx.run("which twine || pip install twine")
+    ctx.run("python setup.py sdist --formats=zip bdist_wheel")
+    ctx.run("twine upload dist/* -r deduper")
+    print("Done. To test please run: "
+          "python -m virtualenv venv "
+          " && source ./venv/bin/activate "
+          " && pip install deduper && hasher -v")
+
+
+@task
+def pypi_wheel(ctx):
+    """
+    Download all `wheel` packages
+    If the target machine has no access to internet we can build, ship, install
+        pip wheel -r requirements-to-freeze.txt -w BUILT_WHEELS
+        scp -r BUILT_WHEELS production_server:WHEE
+        pip install -r requirements-to-freeze.txt --no-index --find-links WHEE
+    """
+    ctx.run('pip wheel deduper -r requirements-to-freeze.txt -w BUILT_WHEELS')
+
+
+@task
 def clean(ctx):
     """
     Remove all generated files

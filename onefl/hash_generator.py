@@ -14,18 +14,6 @@ from onefl.normalized_patient import NormalizedPatient  # noqa
 pd.set_option('display.width', 1500)
 
 
-# TODO: consider moving to a dedicated file
-CONFIG = {
-    'IN_DELIMITER': '\t',
-    'EXPECTED_COLS': ['patid', 'first', 'last', 'dob', 'gender', 'race'],
-    'OUT_DELIMITER': '\t',
-    'OUT_FILE': 'phi_hashes.csv',
-    'LINES_PER_CHUNK': 2000,
-    'SALT': '',
-    'ENABLED_RULES': ['F_L_D_G', 'F_L_D_R']
-}
-
-
 class ConfigErr(Exception):
     pass
 
@@ -101,14 +89,20 @@ class HashGenerator():
         """
         Helper method for preventing config errors
         """
-        for rule_code in config.get('ENABLED_RULES'):
+        enabled_rules = config.get('ENABLED_RULES', None)
+
+        if not enabled_rules:
+            raise ConfigErr('Please verify that the config specifies'
+                            ' the ENABLED_RULES parameter')
+
+        for rule_code in enabled_rules:
             if rule_code not in rulz:
                 raise ConfigErr('Invalid rule code: [{}]! '
                                 'Available codes are: {}'
                                 .format(rule_code, rulz.keys()))
 
     @classmethod
-    def generate(cls, inputdir, outputdir, config=CONFIG):
+    def generate(cls, config, inputdir, outputdir):
         """
         Read the "phi_data.csv" file and generate "hashes.csv"
         containing two (or more) sha256 strings for each line
@@ -141,8 +135,6 @@ class HashGenerator():
         cls.log.info("Using [{}] as destination folder".format(outputdir))
 
         # TODO: add step for validating input column names
-        # TODO: add config to allow adding more rules
-
         in_file = os.path.join(inputdir, 'phi.csv')
         reader = None
 
@@ -176,7 +168,7 @@ class HashGenerator():
 
         # Concatenation can re-order columns so we need to enforce the order
         out_columns = ['patid']
-        out_columns.extend(config['ENABLED_RULES'])
+        out_columns.extend(config.get('ENABLED_RULES'))
 
         out_file = os.path.join(outputdir, config['OUT_FILE'])
         utils.frame_to_file(df[out_columns], out_file,
