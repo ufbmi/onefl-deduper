@@ -8,10 +8,12 @@ Goal: implement tests for hash_generator.py class
 import os
 import unittest
 import pandas as pd
-# import pandas.util.testing as tm
+import pandas.util.testing as tm
 # from mock import patch
 from io import StringIO
+
 from onefl.hash_generator import HashGenerator
+from onefl.normalized_patient import NormalizedPatient
 from onefl import utils
 from onefl import logutils
 
@@ -23,6 +25,7 @@ class TestHashGenerator(unittest.TestCase):
 
     def setUp(self):
         HashGenerator.configure_logger(logger)
+        NormalizedPatient.configure_logger(logger)
         pass
 
     def tearDown(self):
