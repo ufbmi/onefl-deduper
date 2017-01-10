@@ -12,6 +12,8 @@ from datetime import timedelta
 from onefl import logutils
 from onefl.hash_generator import HashGenerator
 from onefl.normalized_patient import NormalizedPatient
+from onefl.version import __version__
+
 logger = logutils.get_a_logger(__file__)
 
 
@@ -27,17 +29,30 @@ def main():
     """
     HashGenerator.configure_logger(logger)
     NormalizedPatient.configure_logger(logger)
+
     parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--version",
+                        default=False,
+                        action='store_true',
+                        help="Show the version number")
     parser.add_argument(
         '-i', '--inputdir',
-        required=True,
+        # required=True,
+        default='.',
         help='input directory name')
     parser.add_argument(
         '-o', '--outputdir',
-        required=True,
+        # required=True,
+        default='.',
         help='output directory name')
 
     args = parser.parse_args()
+
+    if args.version:
+        import sys
+        print("deduper, version {}".format(__version__))
+        sys.exit()
+
     start = time.monotonic()
     success = HashGenerator.generate(args.inputdir, args.outputdir)
     end = time.monotonic()
