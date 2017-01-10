@@ -1,3 +1,11 @@
+
+# OneFL Deduper
+
+| Branch | [Travis-CI] | [Coveralls] |
+| :----- | :---------------------------: | :-------: |
+| Master | [![Build Status](https://travis-ci.org/ufbmi/onefl-deduper.svg?branch=master)](https://travis-ci.org/ufbmi/onefl-deduper?branch=master) | [![Coverage Status](https://coveralls.io/repos/github/ufbmi/onefl-deduper/badge.svg?branch=master)](https://coveralls.io/github/ufbmi/onefl-deduper?branch=master) |
+| Develop | [![Build Status](https://travis-ci.org/ufbmi/onefl-deduper.svg?branch=develop)](https://travis-ci.org/ufbmi/onefl-deduper?branch=develop) | [![Coverage Status](https://coveralls.io/repos/github/ufbmi/onefl-deduper/badge.svg?branch=develop)](https://coveralls.io/github/ufbmi/onefl-deduper?branch=develop) |
+
 # Intro
 
 Welcome to the OneFlorida "De-Duper" tool.

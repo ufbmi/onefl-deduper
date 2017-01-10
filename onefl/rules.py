@@ -1,6 +1,6 @@
 """
-Goal: Store logic related to hashing data according to
-predefined rules.
+Goal: Store the rules by which we pick the elements of patient data before
+    computing the hashed string.
 
 Authors:
      Andrei Sura <sura.andrei@gmail.com>

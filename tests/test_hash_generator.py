@@ -4,18 +4,17 @@ Goal: implement tests for hash_generator.py class
 @authors:
     Andrei Sura <sura.andrei@gmail.com>
 """
-# flake8: noqa
 import os
 import unittest
-import pandas as pd
+# import pandas as pd
 import pandas.util.testing as tm
 # from mock import patch
-from io import StringIO
-
+# from io import StringIO
+from onefl.config import Config
+from onefl import logutils
+from onefl import utils
 from onefl.hash_generator import HashGenerator
 from onefl.normalized_patient import NormalizedPatient
-from onefl import utils
-from onefl import logutils
 
 DELIMITER = '\t'
 logger = logutils.get_a_logger(__file__)
@@ -26,7 +25,6 @@ class TestHashGenerator(unittest.TestCase):
     def setUp(self):
         HashGenerator.configure_logger(logger)
         NormalizedPatient.configure_logger(logger)
-        pass
 
     def tearDown(self):
         pass
@@ -35,7 +33,9 @@ class TestHashGenerator(unittest.TestCase):
         """ Verify that we produce hashes properly """
         inputdir = 'tests/data_in'
         outputdir = 'tests/data_out'
-        result = HashGenerator.generate(inputdir, outputdir)
+        config = Config(root_path='.', defaults={})
+        config.from_pyfile('config/settings.py.example')
+        result = HashGenerator.generate(config, inputdir, outputdir)
         self.assertTrue(result)
 
         # read the reference frame

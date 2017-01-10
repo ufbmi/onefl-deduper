@@ -89,8 +89,9 @@ ENV/
 .ropeproject
 
 *.swp
+config/settings.py
 data/
 private/
-logs/config.txt
+config/logs.cfg
 logs/*.log
 tests/data_out/

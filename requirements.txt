@@ -12,4 +12,5 @@ mock
 pandas
 pylint
 pytest-cov
+setuptools-scm
 tox
