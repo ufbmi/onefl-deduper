@@ -4,6 +4,8 @@ Goal: expose one method for getting a logger
 import os
 import logging
 import logging.config
+from onefl.version import __version__
+
 
 def get_logo():
     return """
@@ -12,13 +14,14 @@ def get_logo():
 \ \ \/\ \     __   \_\ \  __  __  _____      __   _ __
  \ \ \ \ \  /'__`\ /'_` \/\ \/\ \/\ '__`\  /'__`\/\`'__\\
   \ \ \_\ \/\  __//\ \L\ \ \ \_\ \ \ \L\ \/\  __/\ \ \/
-   \ \____/\ \____\ \___,_\ \____/\ \ ,__/\ \____ \\ \_\\
+   \ \____/\ \____\ \___,_\ \____/\ \ ,__/\ \____ \\ \_\\ {}
     \/___/  \/____/\/__,_ /\/___/  \ \ \/  \/____/ \/_/
                                     \ \_\\
                                      \/_/
-"""
+""".format(__version__)
 
 print(get_logo())
+
 
 def get_a_logger(name):
     """
@@ -28,7 +31,7 @@ def get_a_logger(name):
     :param name: string used for naming the logger
     """
     basedir, f = os.path.split(__file__)
-    log_conf = os.path.join(os.path.dirname(basedir), "logs/config.txt")
+    log_conf = os.path.join(os.path.dirname(basedir), "config/logs.cfg")
 
     if os.path.exists(log_conf):
         logging.config.fileConfig(log_conf)
