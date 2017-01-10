@@ -63,8 +63,7 @@ class HashGenerator():
 
         raw = pattern.format(patient) + config['SALT']
         sha_string = utils.apply_sha256(raw)
-        cls.log.debug("Rule {} raw data: {}, hashed: {}"
-                      .format(rule, raw, sha_string))
+        cls.log.debug("For patient [{}] (rule {}): {}, hash_string= {}".format(patient.patid, rule, raw, sha_string))  # noqa
 
         return sha_string
 
