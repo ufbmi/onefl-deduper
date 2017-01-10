@@ -7,6 +7,13 @@
 * `gen_ofid.py` - script for saving hashes in the OneFlorida database
 
 
+## [0.0.1a] - 2017-01-10
+
+### Added
+* Support for reading a dedicated config file
+* Support for packaging
+
+
 ## [0.0.1] - 2017-01-09
 
 ### Added
