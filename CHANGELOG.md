@@ -7,6 +7,15 @@
 * `gen_ofid.py` - script for saving hashes in the OneFlorida database
 
 
+## [0.0.1b] - 2017-01-10
+
+### Added
+* Scheleton file `run/deduper.py`
+
+### Changed 
+* Moved `onefl/run_*` scripts to `run/` folder
+
+
 ## [0.0.1a] - 2017-01-10
 
 ### Added

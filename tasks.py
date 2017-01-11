@@ -25,14 +25,23 @@ def prep_develop(ctx):
 
 
 @task(aliases=['go'])
-def gen_hashes(ctx):
+def hasher(ctx):
     """ Generate hashes from PHI """
     inputfolder = 'data'
     outputfolder = 'data'
 
-    ctx.run('PYTHONPATH=. python gen_hashes.py -i {} -o {} '
+    ctx.run('PYTHONPATH=. python run/hasher.py -i {} -o {} '
             .format(inputfolder, outputfolder))
 
+
+@task(aliases=['go_deduper'])
+def deduper(ctx):
+    """ Generate OneFlorida Ids from hashes """
+    inputfolder = 'data'
+    outputfolder = 'data'
+
+    ctx.run('PYTHONPATH=. python run/deduper.py -i {} -o {} '
+            .format(inputfolder, outputfolder))
 
 @task
 def lint(ctx):
@@ -110,11 +119,15 @@ def pypi_wheel(ctx):
 
 @task
 def clean(ctx):
-    """
-    Remove all generated files
-    """
+    """ Remove all generated files """
     ctx.run('find . -type f -name "*.pyc" -print | xargs rm -f')
     ctx.run('rm -rf htmlcov/ .coverage pylint.out')
     ctx.run('rm -rf .tox/* .ropeproject/')
     ctx.run('rm -rf ./dist ./build ./.eggs ./*.egg-info ./BUILT_WHEELS')
     # ctx.run('rm -f db.sqlite')
+
+
+@task
+def clean_log(ctx):
+    """ Remove log file """
+    ctx.run('rm -f logs/deduper.log')

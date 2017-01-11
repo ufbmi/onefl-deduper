@@ -80,8 +80,8 @@ setup(
 
     entry_points={
         "console_scripts": [
-            "hasher = gen_hashes:main",
-            "deduper = gen_ofids:main",
+            "hasher = run.hasher:main",
+            "deduper = run.deduper:main",
         ],
     },
 )
