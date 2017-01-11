@@ -111,7 +111,7 @@ def pypi_upload(ctx):
     print("Done. To test please run: "
           "python -m virtualenv venv "
           " && source ./venv/bin/activate "
-          " && pip install deduper && hasher -v")
+          " && pip install -U deduper && hasher -v")
 
 
 @task
