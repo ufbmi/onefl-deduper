@@ -74,8 +74,17 @@ def coverage_html(ctx):
 
 
 @task
+def devel_install(ctx):
+    ctx.run('python setup.py develop')
+
+@task
+def devel_uninstall(ctx):
+    ctx.run('python setup.py develop -u')
+
+
+@task
 def sdist(ctx):
-    """ Run the installation """
+    """ Create a `source` distribution """
     ctx.run("python setup.py sdist")
 
 
