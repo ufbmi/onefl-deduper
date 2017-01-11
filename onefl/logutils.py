@@ -7,8 +7,19 @@ import logging.config
 from onefl.version import __version__
 
 
-def get_logo():
-    return """
+def get_figlet(name):
+
+    if 'hasher.py' in name:
+        return """
+ _   _           _
+| | | | __ _ ___| |__   ___ _ __
+| |_| |/ _` / __| '_ \ / _ \ '__|
+|  _  | (_| \__ \ | | |  __/ |
+|_| |_|\__,_|___/_| |_|\___|_|   {}
+"""
+
+    if 'deduper.py' in name:
+        return """
  ____               __
 /\  _`\            /\ \\
 \ \ \/\ \     __   \_\ \  __  __  _____      __   _ __
@@ -18,9 +29,8 @@ def get_logo():
     \/___/  \/____/\/__,_ /\/___/  \ \ \/  \/____/ \/_/
                                     \ \_\\
                                      \/_/
-""".format(__version__)
-
-print(get_logo())
+"""
+    return ''
 
 
 def get_a_logger(name):
@@ -36,6 +46,11 @@ def get_a_logger(name):
     if os.path.exists(log_conf):
         logging.config.fileConfig(log_conf)
         log = logging.getLogger(name)
+        figlet = get_figlet(name)
+
+        if figlet:
+            print(figlet.format(__version__))
+
         log.debug("{} logging was configured using: {}"
                   .format(name, log_conf))
         handlers = logging.getLoggerClass().root.handlers
