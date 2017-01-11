@@ -112,7 +112,7 @@ class HashGenerator():
 
         .. seealso::
 
-            ../gen_hashes.py
+            run_hasher.py
 
         :param inputdir: directory name for the source file
         :param outputdir: directory name for generated file
