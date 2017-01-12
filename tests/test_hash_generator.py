@@ -5,16 +5,20 @@ Goal: implement tests for hash_generator.py class
     Andrei Sura <sura.andrei@gmail.com>
 """
 import os
+import sys
 import unittest
-# import pandas as pd
 import pandas.util.testing as tm
 # from mock import patch
 # from io import StringIO
 from onefl.config import Config
 from onefl import logutils
 from onefl import utils
+from onefl.utils.ui import check_file_exists
 from onefl.hash_generator import HashGenerator
 from onefl.normalized_patient import NormalizedPatient
+
+# patch it
+# sys.exit = lambda *x: None
 
 DELIMITER = '\t'
 logger = logutils.get_a_logger(__file__)
@@ -37,6 +41,14 @@ class TestHashGenerator(unittest.TestCase):
         config.from_pyfile('config/settings.py.example')
         result = HashGenerator.generate(config, inputdir, outputdir)
         self.assertTrue(result)
+
+        # file_name = os.path.join('tests/data_in', 'phi_hashes2.csv')
+        # exists = check_file_exists(ask=True, file_name=file_name)
+        # self.assertFalse(exists)
+
+        file_name = os.path.join('tests/data_in', 'phi_hashes.csv')
+        exists = check_file_exists(ask=False, file_name=file_name)
+        self.assertTrue(exists)
 
         # read the reference frame
         df_expected = utils.frame_from_file(
