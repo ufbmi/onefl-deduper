@@ -9,13 +9,10 @@ import os
 import pandas as pd
 from onefl.rules import AVAILABLE_RULES_MAP as rulz
 from onefl import utils
+from onefl.exc import ConfigErr
 from onefl.normalized_patient import NormalizedPatient  # noqa
 
 pd.set_option('display.width', 1500)
-
-
-class ConfigErr(Exception):
-    pass
 
 
 class HashGenerator():
@@ -69,7 +66,7 @@ class HashGenerator():
         df = pd.DataFrame()
 
         # keep the patid from the source
-        df['patid'] = df_source['patid']
+        df['PATID'] = df_source['patid']
 
         for i, rule in enumerate(rulz):
             cls.log.debug("Applying rule {}: {}".format(i, rule))
@@ -85,7 +82,7 @@ class HashGenerator():
         return df
 
     @classmethod
-    def validate_config(cls, config):
+    def _validate_config(cls, config):
         """
         Helper method for preventing config errors
         """
@@ -104,7 +101,7 @@ class HashGenerator():
     @classmethod
     def generate(cls, config, inputdir, outputdir):
         """
-        Read the "phi_data.csv" file and generate "hashes.csv"
+        Read the "phi.csv" file and generate "phi_hashes.csv"
         containing two (or more) sha256 strings for each line
         in the input file.
 
@@ -126,16 +123,18 @@ class HashGenerator():
             - sha_rule_2 (first_last_dob_race)
 
         """
-        cls.validate_config(config)
+        cls._validate_config(config)
+
+        # TODO: add step for validating input column names
         EXPECTED_COLS = config['EXPECTED_COLS']
+
         cls.log.info("Using [{}] as source folder".format(inputdir))
         cls.log.info("Using [{}] as salt".format(config['SALT']))
         cls.log.info("Expecting input file to contain columns: {}"
                      .format(EXPECTED_COLS))
         cls.log.info("Using [{}] as destination folder".format(outputdir))
 
-        # TODO: add step for validating input column names
-        in_file = os.path.join(inputdir, 'phi.csv')
+        in_file = os.path.join(inputdir, config['IN_FILE'])
         reader = None
 
         try:
@@ -167,7 +166,7 @@ class HashGenerator():
         df = pd.concat(frames, ignore_index=True)
 
         # Concatenation can re-order columns so we need to enforce the order
-        out_columns = ['patid']
+        out_columns = ['PATID']
         out_columns.extend(config.get('ENABLED_RULES'))
 
         out_file = os.path.join(outputdir, config['OUT_FILE'])
