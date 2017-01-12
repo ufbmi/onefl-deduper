@@ -11,6 +11,8 @@ invoke==0.14.0
 mock==2.0.0
 pandas==0.19.2
 pylint==1.6.4
+pyodbc==4.0.0
 pytest-cov==2.4.0
 setuptools-scm==1.15.0
+SQLAlchemy==1.1.4
 tox==2.5.0
