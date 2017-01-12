@@ -90,8 +90,9 @@ ENV/
 
 *.swp
 sqlite.db
-config/settings.py
-config/settings_tests.py
+config/settings_hasher.py
+config/settings_linker.py
+
 data/
 private/
 config/logs.cfg
