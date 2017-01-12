@@ -7,6 +7,7 @@ python:
 
 install:
     - pip install tox-travis coveralls
+    - apt-get install unixodbc-dev
 script:
     - tox
 after_success:
