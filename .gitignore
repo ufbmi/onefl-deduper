@@ -89,9 +89,12 @@ ENV/
 .ropeproject
 
 *.swp
+sqlite.db
 config/settings.py
+config/settings_tests.py
 data/
 private/
 config/logs.cfg
 logs/*.log
 tests/data_out/
+phi*.csv
