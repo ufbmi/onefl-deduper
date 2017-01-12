@@ -10,7 +10,7 @@ from onefl.config import Config
 from onefl.models import base
 from onefl.utils import db
 
-SETTINGS_FILE = 'config/settings_tests.py'
+SETTINGS_FILE = 'config/test_settings_linker.py'
 
 
 class BaseTestCase(TestCase):
@@ -28,6 +28,7 @@ class BaseTestCase(TestCase):
         super(BaseTestCase, self).setUp()
         config = Config(root_path='.', defaults={})
         config.from_pyfile(SETTINGS_FILE)
+        self.config = config
         self.engine = db.get_db_engine(config)
         self.session = db.get_db_session(self.engine,
                                          create_tables=True)
