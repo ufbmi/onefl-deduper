@@ -57,6 +57,7 @@ class TestModels(BaseTestCase):
 
         link = LinkageEntity.create(
             partner_code='UFH',
+            linkage_patid='123',
             linkage_uuid=pers_uuid,
             linkage_hash=ahash,
             linkage_added_at=added_date)
