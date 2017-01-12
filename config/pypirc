@@ -1,0 +1,9 @@
+[distutils]
+
+index-servers =
+    deduper
+
+[deduper]
+repository: https://pypi.python.org/pypi
+username: enter_your_username
+password: enter_your_password
