@@ -26,20 +26,27 @@ class TestModels(BaseTestCase):
         # added_date = utils.get_db_friendly_date_time()
         added_date = datetime.now()
 
-        partner_ufh = PartnerEntity.create(
-            partner_code="UFH",
-            partner_description="University of Florida",
-            partner_added_at=added_date)
+        partner_ufh = self.session.query(PartnerEntity).filter_by(
+            partner_code='UFH').one_or_none()
 
-        partner_flm = PartnerEntity.create(
-            partner_code="FLM",
-            partner_description="Florida Medicaid",
-            partner_added_at=added_date)
+        if partner_ufh is None:
+            partner_ufh = PartnerEntity.create(
+                partner_code="UFH",
+                partner_description="University of Florida",
+                partner_added_at=added_date)
 
-        print(partner_ufh)
-
+            print("Saved fresh row: {}\n".format(partner_ufh))
         self.assertEquals("UFH", partner_ufh.partner_code)
-        self.assertEquals("FLM", partner_flm.partner_code)
+
+        partner_flm = self.session.query(PartnerEntity).filter_by(
+            partner_code='FLM').one_or_none()
+
+        if partner_flm is None:
+            partner_flm = PartnerEntity.create(
+                partner_code="FLM",
+                partner_description="Florida Medicaid",
+                partner_added_at=added_date)
+            self.assertEquals("FLM", partner_flm.partner_code)
 
         # verify an error is raised if we try to to find one
         with self.assertRaises(MultipleResultsFound):

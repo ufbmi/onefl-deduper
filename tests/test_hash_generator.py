@@ -35,7 +35,8 @@ class TestHashGenerator(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_generate(self):
+    # @unittest.skip
+    def test_hasher(self):
         """ Verify that we produce hashes properly """
         inputdir = 'tests/data_in'
         outputdir = 'tests/data_out'
@@ -44,6 +45,7 @@ class TestHashGenerator(unittest.TestCase):
         result = HashGenerator.generate(config, inputdir, outputdir)
         self.assertTrue(result)
 
+        # Check if the reference file exists
         file_name = os.path.join('tests/data_in', 'phi_hashes.csv')
         exists = check_file_exists(ask=False, file_name=file_name)
         self.assertTrue(exists)
