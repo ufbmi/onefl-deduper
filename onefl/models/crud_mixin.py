@@ -1,7 +1,6 @@
 """
 Goal: simplify the code when interacting with entities
 """
-import sqlalchemy as db
 from onefl.models.base import get_session
 
 

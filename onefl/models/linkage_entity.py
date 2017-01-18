@@ -63,37 +63,27 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
         return utils.hexlify(self.linkage_hash)
 
     @staticmethod
-    def get_chunks_cache(chunks):
+    def init_hash_uuid_lut(session, hashes):
         """
-        From the list [x, y, z] of chunks return
+        From the list [x, y, z] of hashes return
         a dictionary which tells if a chunk was `linked` or not:
             {x: LinkageEntity, y: LinkageEntity, z: None}
         """
-        bin_chunks = [binascii.unhexlify(chunk.encode('utf-8'))
-                      for chunk in chunks]
-        links = LinkageEntity.query.filter(
-            LinkageEntity.linkage_hash.in_(bin_chunks)).all()
+        # Note: unhexlify is necessary since the database stores
+        # binary representations of the hashes
+        bin_hashes = [binascii.unhexlify(ahash.encode('utf-8'))
+                      for ahash in hashes]
+        links = session.query(LinkageEntity).filter(
+            LinkageEntity.linkage_hash.in_(bin_hashes)).all()
         links_cache = {link.friendly_hash(): link for link in links}
 
-        result = {}
-        for chunk in chunks:
-            result[chunk] = links_cache.get(chunk, None)
+        lut = {}
 
-        return result
+        # Extra loop so we can provide an entry for hashes not found in the db
+        for ahash in hashes:
+            lut[ahash] = links_cache.get(ahash, None)
 
-    @staticmethod
-    def get_distinct_uuids_for_chunks(chunks_cache):
-        """
-        From the list [x, y, z] of chunks return the set(uuid_1, uuid_2)
-        if the database contains the following rows:
-            x => uuid_1
-            y => uuid_1
-            z => uuid_2
-        :rtype set:
-        :return the mapping status of each chunk
-        """
-        return set(link.friendly_uuid() for link in chunks_cache.values()
-                   if link)
+        return lut
 
     def __repr__(self):
         """ Return a friendly object representation """

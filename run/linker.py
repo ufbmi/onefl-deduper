@@ -50,6 +50,11 @@ def main():
         default='.',
         help='output directory name')
 
+    parser.add_argument(
+        '-p', '--partner',
+        default='',
+        help='output directory name')
+
     args = parser.parse_args()
 
     if args.version:
@@ -60,7 +65,10 @@ def main():
     config = Config(root_path=ROOT_PATH, defaults={})
     config.from_pyfile(args.config)
     start = time.monotonic()
-    success = LinkGenerator.generate(config, args.inputdir, args.outputdir)
+    success = LinkGenerator.generate(config,
+                                     args.inputdir,
+                                     args.outputdir,
+                                     args.partner)
     success = True
     end = time.monotonic()
     elapsed = (end - start)
