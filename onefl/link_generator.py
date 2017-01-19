@@ -63,7 +63,8 @@ class LinkGenerator():
             # TODO: check if we need to encrypt the `patid` here
             patid = row['PATID']
             # cls.log.info("Parsing row for patient {}".format(patid))
-            pat_hashes = sorted({row[rule] for rule in rules if rule != ''})
+            pat_hashes = sorted({row[rule] for rule in rules
+                                 if row[rule] != ''})
             binary_uuid = None
 
             if len(pat_hashes) >= 1:
