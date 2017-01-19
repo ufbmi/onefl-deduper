@@ -9,6 +9,7 @@ import binascii
 from onefl import utils
 from onefl.models.base import DeclarativeBase
 from onefl.models.crud_mixin import CRUDMixin
+from onefl.models.partner_entity import PartnerEntity
 
 """
 +------------------+---------------------+------+-----+---------+
@@ -50,7 +51,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
                                  nullable=False)
 
     # @OneToOne
-    # partner = db.relationship(PartnerEntity, uselist=False, lazy='joined')
+    partner = db.orm.relationship(PartnerEntity, uselist=False, lazy='joined')
 
     @staticmethod
     def short_hash(val):
