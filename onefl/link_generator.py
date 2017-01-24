@@ -17,7 +17,9 @@ from onefl import utils
 from onefl.utils import db
 from onefl.exc import ConfigErr
 from onefl.models.linkage_entity import LinkageEntity
+from onefl.models.rule_entity import RuleEntity
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
+from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_G  # noqa
 
 pd.set_option('display.width', 1500)
 
@@ -59,6 +61,14 @@ class LinkGenerator():
         cls.log.info("Found {} distinct UUID's from {} hashes."
                      .format(len(distinct_uuids), len(hashes)))
 
+        # rule = RuleEntity.create(
+        #     rule_code=RULE_CODE_F_L_D_R,
+        #     rule_description='First Last DOB Race',
+        #     rule_added_at=added_date)
+
+        cache = RuleEntity.get_rules_cache(session)
+        rule_id = cache.get(RULE_CODE_F_L_D_R)
+
         for index, row in df_source.iterrows():
             # TODO: check if we need to encrypt the `patid` here
             patid = row['PATID']
@@ -88,6 +98,7 @@ class LinkGenerator():
                     # Save the new UUID and update the LUT...
                     link = LinkageEntity.create(
                         partner_code=partner_code,
+                        rule_id=rule_id,
                         linkage_patid=patid,
                         linkage_uuid=binary_uuid,
                         linkage_hash=binary_hash,

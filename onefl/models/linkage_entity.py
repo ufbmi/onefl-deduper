@@ -10,6 +10,7 @@ from onefl import utils
 from onefl.models.base import DeclarativeBase
 from onefl.models.crud_mixin import CRUDMixin
 from onefl.models.partner_entity import PartnerEntity
+from onefl.models.rule_entity import RuleEntity  # noqa
 
 """
 +------------------+---------------------+------+-----+---------+
@@ -37,6 +38,9 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
                              db.ForeignKey('PARTNER.PARTNER_CODE'),
                              nullable=False)
 
+    rule_id = db.Column('RULE_ID', db.Integer,
+                        db.ForeignKey('RULE.RULE_ID'), nullable=False)
+
     # This column stores the original (unscrambled) patid
     linkage_patid = db.Column('LINKAGE_PATID', db.Text(128), nullable=False)
 
@@ -52,6 +56,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
 
     # @OneToOne
     partner = db.orm.relationship(PartnerEntity, uselist=False, lazy='joined')
+    rule = db.orm.relationship(RuleEntity, uselist=False, lazy='joined')
 
     @staticmethod
     def short_hash(val):
@@ -91,6 +96,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
 
         return "<LinkageEntity (linkage_id: {0.id}, "\
             "partner_code: {0.partner_code}, " \
+            "rule_id: {0.rule_id}, "\
             "linkage_patid: {0.linkage_patid}, "\
             "linkage_uuid: {1}, "\
             "linkage_hash: {2}, "\

@@ -27,7 +27,8 @@ class RuleEntity(CRUDMixin, DeclarativeBase):
     __tablename__ = 'RULE'
 
     id = db.Column('RULE_ID', db.Integer, primary_key=True)
-    rule_code = db.Column('RULE_CODE', db.Text, nullable=False)
+    rule_code = db.Column('RULE_CODE', db.Text,
+                          nullable=False, unique=True)
     rule_description = db.Column('rule_description', db.Text,
                                  nullable=False)
     rule_added_at = db.Column('RULE_ADDED_AT', db.DateTime,
@@ -35,6 +36,9 @@ class RuleEntity(CRUDMixin, DeclarativeBase):
 
     @staticmethod
     def get_rules_cache(session):
+        """
+        :return dictionary: with all available {rule_code -> rule.id} mappings
+        """
         rules = session.query(RuleEntity).all()
         result = {rule.rule_code: rule.id for rule in rules}
         return result
