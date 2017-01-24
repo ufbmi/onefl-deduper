@@ -9,17 +9,37 @@ import unittest
 import binascii
 from datetime import datetime
 from sqlalchemy.orm.exc import MultipleResultsFound
+from sqlalchemy.orm.exc import NoResultFound
 
 from base_test import BaseTestCase
 from onefl import utils
 from onefl.models.partner_entity import PartnerEntity
 from onefl.models.linkage_entity import LinkageEntity
+from onefl.models.rule_entity import RuleEntity
+from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_G  # noqa
 
 
 class TestModels(BaseTestCase):
 
     def setUp(self):
         super(TestModels, self).setUp()
+
+    def create_rules(self):
+        """ Create rule rows """
+        added_date = datetime.now()
+
+        with self.assertRaises(NoResultFound):
+            self.session.query(RuleEntity).filter_by(id=1).one()
+
+        rule = RuleEntity.create(
+            rule_code=RULE_CODE_F_L_D_R,
+            rule_description='First Last DOB Race',
+            rule_added_at=added_date)
+        print(rule)
+        self.assertEquals(1, rule.id)
+        cache = RuleEntity.get_rules_cache(self.session)
+        self.assertIsNotNone(cache)
+        print(cache)
 
     def create_partners(self):
         """ Verify we can store PARTNER rows """
