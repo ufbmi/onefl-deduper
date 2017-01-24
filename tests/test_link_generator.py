@@ -8,6 +8,7 @@ Goal: implement tests for `LinkGenerator` class
 import os
 import unittest
 import pandas.util.testing as tm  # noqa
+from base_test import BaseTestCase
 from onefl.config import Config
 from onefl import logutils
 from onefl import utils
@@ -20,7 +21,8 @@ logger = logutils.get_a_logger(__file__)
 SETTINGS_FILE = 'config/test_settings_linker.py'
 
 
-class TestLinkGenerator(unittest.TestCase):
+# class TestLinkGenerator(unittest.TestCase):
+class TestLinkGenerator(BaseTestCase):
 
     def setUp(self):
         super(TestLinkGenerator, self).setUp()
