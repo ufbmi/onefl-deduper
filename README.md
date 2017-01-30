@@ -63,6 +63,13 @@ as in the diagram below:
     + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 </pre>
 
+# Installation
+
+The two components of the application
+([hasher](run/hasher.py), [linker](run/linker.py)) need proper configuration in
+order to function. For more details please refer to the
+[docs/installation.md](docs/installation.md)
+
 
 # References
 
