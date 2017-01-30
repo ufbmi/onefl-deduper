@@ -70,8 +70,13 @@ The two components of the application
 order to function. For more details please refer to the
 [docs/installation.md](docs/installation.md)
 
+The format for the input file for the `hasher` component is described in the 
+[input-specs.md](docs/input-specs.md) document.
+
 
 # References
 
+- CAPriCORN: Chicago Area Patient-Centered Outcomes Research Network - https://www.ncbi.nlm.nih.gov/pubmed/24821736
 - http://infolab.stanford.edu/serf/
 - "Swoosh: A Generic Approach to Entity Resolution" - http://link.springer.com/article/10.1007%2Fs00778-008-0098-x
+
