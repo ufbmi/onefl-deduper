@@ -22,8 +22,7 @@ as in the diagram below:
     +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     |   Partner Domain
     |
-    | (generate a CSV files with PHI)
-    |
+    |    (CSV file with PHI)                                (CSV file with no PHI)
     |   +--------------------------+                       +--------------------------+
     |   |   PHI_DATA.csv           | ----> hasher.py ----> |    HASHES.csv            |
     |   | patid, first, last,      |                       | patid, F_L_D_G, F_L_D_R  |
@@ -31,29 +30,45 @@ as in the diagram below:
     |   +--------------------------+                       +--------------------------+
     |                                                            ||
     +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - || - - - - - -
+    |   OneFlorida Domain                                        \/
+    |                                                       +--------------------------+
+    |                                                       | OneFlorida SFTP Server   |
+    |                                                       +--------------------------+
+    |                                                            ||
+    |                                                            ||
     |                                                            \/
-    |                                                       +-----------------+
-    |                                                       |  UF SFTP Server |
-    |                                                       +-----------------+
-    |                                                           ||
-    |                                                           ||
-    |                                                           \/
-    |                                                       +------------+
-    |      ____________                                     | HASHES.csv |
-    |    /              \                                   +------------+
+    |                                                       +--------------------------+
+    |                                                       |   HASHES.csv             |
+    |                                                       | patid, F_L_D_G, F_L_D_R  |
+    |                                                       +--------------------------+
+    |                                                            |
+    |      ____________                                          |
+    |    /              \                                        |
     |   |               /|                                      /
     |   |\_____________/ |                                     /
-    |   |              | |  <------------- deduper.py <-------
+    |   |              | |  <------------- linker.py <--------
     |   |  UF Database | |
     |   |              |/
     |    \_____________/
     |
-    |    UF Domain
+    |       (Links between hashes -> UUID's)
+    |                                                             _____   O
+    |       patid, partner_code, linkage_uuid, linkage_hash      / /     -+-
+    |         123,          UFH,       abc...,       def...   <-- /       |
+    |         456,          FLM,       abc...,       def...   <--        / \
+    |         789,          FLM,       987...,       012...
     |
     |    (generate OF_ID from hashes)
     |
     + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 </pre>
+
+# Installation
+
+The two components of the application
+([hasher](run/hasher.py), [linker](run/linker.py)) need proper configuration in
+order to function. For more details please refer to the
+[docs/installation.md](docs/installation.md)
 
 
 # References
