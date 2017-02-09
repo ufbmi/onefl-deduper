@@ -37,6 +37,7 @@ class TestModels(BaseTestCase):
             partner_code='UFH',
             rule_id=rule_id,
             linkage_patid='123',
+            linkage_flag=0,
             linkage_uuid=pers_uuid,
             linkage_hash=ahash,
             linkage_added_at=added_date)

@@ -42,7 +42,7 @@ class TestLinkGenerator(BaseTestCase):
         self.assertTrue(result)
 
         # Check if the reference file exists
-        file_name = os.path.join('tests/data_in', 'links.csv')
+        file_name = os.path.join(inputdir, 'links.csv')
         exists = check_file_exists(ask=False, file_name=file_name)
         self.assertTrue(exists)
 
@@ -50,9 +50,9 @@ class TestLinkGenerator(BaseTestCase):
         df_expected = utils.frame_from_file(file_name, delimiter=DELIMITER)
 
         # read the frame produced by calling `generate()`
-        df_actual = utils.frame_from_file(
-            os.path.join('tests/data_out', 'links.csv'),
-            delimiter=DELIMITER)
+        file_name_actual = os.path.join(outputdir, 'links.csv')
+        df_actual = utils.frame_from_file(file_name_actual,
+                                          delimiter=DELIMITER)
 
         # tm.assert_frame_equal(df_expected, df_actual)
         uuids_actual = set()
@@ -62,6 +62,17 @@ class TestLinkGenerator(BaseTestCase):
 
         # compare the numbers of distinct UUIDs
         self.assertEqual(len(uuids_actual), len(uuids_expected))
+
+        # when we run the second time there are rows in the database
+        # so we should get no new UUIDs...
+        result = LinkGenerator.generate(config, inputdir, outputdir,
+                                        partner='FLM')
+
+        df_actual_2 = utils.frame_from_file(file_name_actual,
+                                            delimiter=DELIMITER)
+        # print(df_actual_2)
+
+
 
 
 if __name__ == '__main__':
