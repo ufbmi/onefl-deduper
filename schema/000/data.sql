@@ -20,8 +20,8 @@ VALUES
 
 /*
 INSERT INTO dbo.linkage 
-    (partner_code, linkage_patid, linkage_uuid, linkage_hash, linkage_added_at)
+    (partner_code, linkage_patid, linkage_flag, linkage_uuid, linkage_hash, linkage_added_at)
 VALUES
-    ('HCN', 'patid_1', NEWID(), CONVERT(VARBINARY(MAX), 'abc'), GETDATE())
+    ('HCN', 'patid_1', 0, NEWID(), CONVERT(VARBINARY(MAX), 'abc'), GETDATE())
 */
 
