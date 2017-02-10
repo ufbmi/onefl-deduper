@@ -81,7 +81,7 @@ setup(
     entry_points={
         "console_scripts": [
             "hasher = run.hasher:main",
-            "deduper = run.deduper:main",
+            "linker = run.linker:main",
         ],
     },
 )

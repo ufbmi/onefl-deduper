@@ -1,0 +1,19 @@
+
+IN_DELIMITER = '\t'
+OUT_DELIMITER = '\t'
+
+IN_FILE = 'phi_hashes.csv'
+OUT_FILE = 'links.csv'
+
+# How many lines to parse at once
+LINES_PER_CHUNK = 2000
+
+DB_PORT = 1433
+
+DB_HOST = ''
+DB_NAME = ''
+DB_USER = ''
+DB_PASS = ''
+
+# List rules for computing hashes
+ENABLED_RULES = ['F_L_D_R', 'F_L_D_S']

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Goal: Implement the entry point for the hash generator
+Goal: Implement the entry point for generating OneFlorda IDs
 
 @authors:
     Andrei Sura <sura.andrei@gmail.com>
@@ -11,14 +11,14 @@ import argparse
 from datetime import timedelta
 from onefl import logutils
 from onefl.config import Config
-# from onefl.id_generator import IdGenerator
+from onefl.link_generator import LinkGenerator
 from onefl.version import __version__
 
 logger = logutils.get_a_logger(__file__)
 
 # The config file is looked up relative to this "root" folder
 ROOT_PATH = '.'
-DEFAULT_SETTINGS_FILE = 'config/settings.py'
+DEFAULT_SETTINGS_FILE = 'config/settings_linker.py'
 
 
 def main():
@@ -28,10 +28,10 @@ def main():
 
     .. seealso::
 
-        :meth:`IdGenerator.generate`
+        :meth:`LinkGenerator.generate`
 
     """
-    # IdGenerator.configure_logger(logger)
+    LinkGenerator.configure_logger(logger)
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--version",
                         default=False,
@@ -50,6 +50,11 @@ def main():
         default='.',
         help='output directory name')
 
+    parser.add_argument(
+        '-p', '--partner',
+        default='',
+        help='output directory name')
+
     args = parser.parse_args()
 
     if args.version:
@@ -60,7 +65,10 @@ def main():
     config = Config(root_path=ROOT_PATH, defaults={})
     config.from_pyfile(args.config)
     start = time.monotonic()
-    # success = IdGenerator.generate(config, args.inputdir, args.outputdir)
+    success = LinkGenerator.generate(config,
+                                     args.inputdir,
+                                     args.outputdir,
+                                     args.partner)
     success = True
     end = time.monotonic()
     elapsed = (end - start)

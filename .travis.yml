@@ -1,4 +1,4 @@
-sudo: false
+sudo: true
 language: python
 
 python:
@@ -7,6 +7,7 @@ python:
 
 install:
     - pip install tox-travis coveralls
+    - sudo apt-get install unixodbc-dev
 script:
     - tox
 after_success:

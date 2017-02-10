@@ -9,13 +9,12 @@ import os
 import pandas as pd
 from onefl.rules import AVAILABLE_RULES_MAP as rulz
 from onefl import utils
+from onefl.exc import ConfigErr
 from onefl.normalized_patient import NormalizedPatient  # noqa
 
 pd.set_option('display.width', 1500)
-
-
-class ConfigErr(Exception):
-    pass
+VALID_RACE_VALS = ['', '01', '02', '03', '04', '05', '06', '07', 'NI', 'UN', 'OT']  # noqa
+VALID_SEX_VALS = ['', 'A', 'F', 'M', 'NI', 'UN', 'OT']
 
 
 class HashGenerator():
@@ -39,7 +38,7 @@ class HashGenerator():
             pat_first_name=ser['first'],
             pat_last_name=ser['last'],
             pat_birth_date=ser['dob'],
-            pat_gender=ser['gender'],
+            pat_sex=ser['sex'],
             pat_race=ser['race']
         )
         # cls.log.info("Patient: {}".format(patient))
@@ -69,7 +68,7 @@ class HashGenerator():
         df = pd.DataFrame()
 
         # keep the patid from the source
-        df['patid'] = df_source['patid']
+        df['PATID'] = df_source['patid']
 
         for i, rule in enumerate(rulz):
             cls.log.debug("Applying rule {}: {}".format(i, rule))
@@ -85,7 +84,7 @@ class HashGenerator():
         return df
 
     @classmethod
-    def validate_config(cls, config):
+    def _validate_config(cls, config):
         """
         Helper method for preventing config errors
         """
@@ -104,7 +103,7 @@ class HashGenerator():
     @classmethod
     def generate(cls, config, inputdir, outputdir):
         """
-        Read the "phi_data.csv" file and generate "hashes.csv"
+        Read the "phi.csv" file and generate "phi_hashes.csv"
         containing two (or more) sha256 strings for each line
         in the input file.
 
@@ -122,20 +121,20 @@ class HashGenerator():
 
         Columns:
             - patid
-            - sha_rule_1 (first_last_dob_gender)
-            - sha_rule_2 (first_last_dob_race)
+            - sha_rule_1 (first_last_dob_race)
+            - sha_rule_2 (first_last_dob_sex)
 
         """
-        cls.validate_config(config)
+        cls._validate_config(config)
         EXPECTED_COLS = config['EXPECTED_COLS']
+
         cls.log.info("Using [{}] as source folder".format(inputdir))
         cls.log.info("Using [{}] as salt".format(config['SALT']))
         cls.log.info("Expecting input file to contain columns: {}"
                      .format(EXPECTED_COLS))
         cls.log.info("Using [{}] as destination folder".format(outputdir))
 
-        # TODO: add step for validating input column names
-        in_file = os.path.join(inputdir, 'phi.csv')
+        in_file = os.path.join(inputdir, config['IN_FILE'])
         reader = None
 
         try:
@@ -161,13 +160,33 @@ class HashGenerator():
 
         for df_source in reader:
             df_source.fillna('', inplace=True)
+
+            for col in EXPECTED_COLS:
+                if col not in sorted(df_source):
+                    raise Exception("The input data frame does not have all "
+                                    "expected columns: {}"
+                                    .format(EXPECTED_COLS))
+
+            # validate the values constrained to set
+            invalid_race = df_source.loc[~df_source['race'].isin(VALID_RACE_VALS)]  # noqa
+            invalid_sex = df_source.loc[~df_source['sex'].isin(VALID_SEX_VALS)]
+
+            if len(invalid_race) > 0:
+                cls.log.info("Please check race: {}".format(invalid_race))
+                raise Exception("The input file contains invalid value for "
+                                "`race` column. Please review the specs.")
+            if len(invalid_sex) > 0:
+                cls.log.warning("Please check sex: {}".format(invalid_sex))
+                raise Exception("The input file contains invalid value for "
+                                "`sex` column. Please review the specs.")
+
             df = cls._process_frame(df_source, config)
             frames.append(df)
 
         df = pd.concat(frames, ignore_index=True)
 
         # Concatenation can re-order columns so we need to enforce the order
-        out_columns = ['patid']
+        out_columns = ['PATID']
         out_columns.extend(config.get('ENABLED_RULES'))
 
         out_file = os.path.join(outputdir, config['OUT_FILE'])

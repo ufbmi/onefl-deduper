@@ -24,7 +24,7 @@ def prep_develop(ctx):
     ctx.run('pip freeze')
 
 
-@task(aliases=['go'])
+@task(aliases=['hash'])
 def hasher(ctx):
     """ Generate hashes from PHI """
     inputfolder = 'data'
@@ -34,14 +34,15 @@ def hasher(ctx):
             .format(inputfolder, outputfolder))
 
 
-@task(aliases=['go_deduper'])
-def deduper(ctx):
+@task(aliases=['link'])
+def linker(ctx):
     """ Generate OneFlorida Ids from hashes """
     inputfolder = 'data'
     outputfolder = 'data'
 
-    ctx.run('PYTHONPATH=. python run/deduper.py -i {} -o {} '
+    ctx.run('PYTHONPATH=. python run/linker.py -i {} -o {} '
             .format(inputfolder, outputfolder))
+
 
 @task
 def lint(ctx):
@@ -77,6 +78,7 @@ def coverage_html(ctx):
 def devel_install(ctx):
     ctx.run('python setup.py develop')
 
+
 @task
 def devel_uninstall(ctx):
     ctx.run('python setup.py develop -u')
@@ -93,7 +95,8 @@ def pypi_check_config(ctx):
     ctx.run("echo 'Check the presence of the ~/.pypirc config file'")
     ctx.run("test -f ~/.pypirc || echo 'Please create the ~/.pypirc file. "
             "Here is a template: \n'", echo=False)
-    ctx.run("(test -f ~/.pypirc && echo "")|| (cat config/pypirc && exit 1)", echo=False)
+    ctx.run("(test -f ~/.pypirc && echo "")|| (cat config/pypirc && exit 1)",
+            echo=False)
 
 
 @task(pre=[pypi_check_config])
@@ -111,7 +114,7 @@ def pypi_upload(ctx):
     print("Done. To test please run: "
           "python -m virtualenv venv "
           " && source ./venv/bin/activate "
-          " && pip install deduper && hasher -v")
+          " && pip install -U deduper && hasher -v")
 
 
 @task

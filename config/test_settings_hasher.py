@@ -2,14 +2,16 @@
 Goal: store application settings
 """
 
-# TODO: check if wee need to allow allow flexible column naming
-EXPECTED_COLS = ['patid', 'first', 'last', 'dob', 'gender', 'race']
+# TODO: check if we need to allow flexible column naming
+EXPECTED_COLS = ['patid', 'first', 'last', 'dob', 'race', 'sex']
 
 IN_DELIMITER = '\t'
 OUT_DELIMITER = '\t'
+
+IN_FILE = 'phi.csv'
 OUT_FILE = 'phi_hashes.csv'
 
-# How many lines parse at once
+# How many lines to parse at once
 LINES_PER_CHUNK = 2000
 
 # TODO: check if we need a secret salt that only partners know
@@ -18,4 +20,4 @@ LINES_PER_CHUNK = 2000
 SALT = ''
 
 # List rules for computing hashes
-ENABLED_RULES = ['F_L_D_G', 'F_L_D_R']
+ENABLED_RULES = ['F_L_D_R', 'F_L_D_S']

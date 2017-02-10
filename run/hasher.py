@@ -19,7 +19,7 @@ logger = logutils.get_a_logger(__file__)
 
 # The config file is looked up relative to this "root" folder
 ROOT_PATH = '.'
-DEFAULT_SETTINGS_FILE = 'config/settings.py'
+DEFAULT_SETTINGS_FILE = 'config/settings_hasher.py'
 
 
 def main():

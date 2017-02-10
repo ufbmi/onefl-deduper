@@ -9,7 +9,8 @@ import os
 import sys
 import unicodedata
 # import hashlib
-# import uuid
+import uuid
+import binascii
 from hashlib import sha256
 
 from csv import QUOTE_NONE, QUOTE_ALL  # noqa
@@ -44,6 +45,33 @@ def prepare_for_hashing(text):
     if not text:
         return ''
     return text.translate(CHARS_TO_DELETE).lower()
+
+
+def hexlify(val):
+    """
+    This function is used to display binary data in a friendly format.
+
+        .. seealso::
+            :meth:`LinkageEntity:friendly_uuid`
+
+    Note:
+        - Without the decode() the builtin `hexlify` return the bytes for
+            hexadecimal representation of the binary data.
+        - The returned string is twice as long as the length of data.
+
+    :param val: binary
+    :rtype: string
+    """
+    return binascii.hexlify(val).decode()
+
+
+def get_uuid_bin(uuid_text=None):
+    """
+    Note: the returned value needs to be hexlified to be human readable
+    """
+    if not uuid_text:
+        uuid_text = uuid.uuid1()
+    return binascii.unhexlify(str(uuid_text).replace('-', '').lower().encode())
 
 
 def apply_sha256(val):
@@ -91,6 +119,14 @@ def format_date(val, fmt='%m-%d-%Y'):
                     .format(val, fmt, exc))
 
     return date_obj
+
+
+def get_db_friendly_date_time():
+    """
+    :rtype: string
+    :return current time in format: "2014-06-24 01:23:24"
+    """
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def get_file_size(file_name):
