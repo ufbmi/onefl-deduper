@@ -16,4 +16,4 @@ DB_USER = ''
 DB_PASS = ''
 
 # List rules for computing hashes
-ENABLED_RULES = ['F_L_D_G', 'F_L_D_R']
+ENABLED_RULES = ['F_L_D_R', 'F_L_D_S']

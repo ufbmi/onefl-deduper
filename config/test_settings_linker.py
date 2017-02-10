@@ -13,8 +13,8 @@ LINES_PER_CHUNK = 2000
 
 # List rules for computing hashes
 ENABLED_RULES = OrderedDict(
-    [('1', 'F_L_D_G'),
-     ('2', 'F_L_D_R')])
+    [('1', 'F_L_D_R'),
+     ('2', 'F_L_D_S')])
 
 # List column names for the input file
 EXPECTED_COLS = ['PATID']

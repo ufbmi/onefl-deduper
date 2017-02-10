@@ -12,17 +12,17 @@ Authors:
 #
 # "...87% (216 million of 248 million) of the population in the
 #   United States had reported characteristics that likely made them
-#   unique based only on {5-digit ZIP, gender, date of birth}."
+#   unique based only on {5-digit ZIP, sex, date of birth}."
 
 from onefl import utils  # noqa
 from onefl.normalized_patient import NormalizedPatient  # noqa
 
 
-# _1 First Name + Last Name + DOB + Gender
-RULE_CODE_F_L_D_G = 'F_L_D_G'
-
-# _2 Last Name + First Name + DOB + Race
+# Last Name + First Name + DOB + Race
 RULE_CODE_F_L_D_R = 'F_L_D_R'
+
+# First Name + Last Name + DOB + Sex
+RULE_CODE_F_L_D_S = 'F_L_D_S'
 
 
 # In order to guarantee correctness we will allow the partners
@@ -31,9 +31,9 @@ RULE_CODE_F_L_D_R = 'F_L_D_R'
 # of the client software.
 AVAILABLE_RULES_MAP = {
 
-    RULE_CODE_F_L_D_G: {
-        'required_attr': ['pat_first_name', 'pat_last_name', 'pat_birth_date', 'pat_gender'],  # NOQA
-        'pattern': '{0.pat_first_name}{0.pat_last_name}{0.pat_birth_date}{0.pat_gender}',  # NOQA
+    RULE_CODE_F_L_D_S: {
+        'required_attr': ['pat_first_name', 'pat_last_name', 'pat_birth_date', 'pat_sex'],  # NOQA
+        'pattern': '{0.pat_first_name}{0.pat_last_name}{0.pat_birth_date}{0.pat_sex}',  # NOQA
     },
     RULE_CODE_F_L_D_R: {
         'required_attr': ['pat_first_name', 'pat_last_name', 'pat_birth_date', 'pat_race'],  # NOQA

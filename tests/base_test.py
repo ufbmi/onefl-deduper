@@ -14,7 +14,7 @@ from onefl.utils import db
 from sqlalchemy.orm.exc import MultipleResultsFound  # noqa
 from onefl.models.partner_entity import PartnerEntity
 from onefl.models.rule_entity import RuleEntity
-from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_G  # noqa
+from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S  # noqa
 
 SETTINGS_FILE = 'config/test_settings_linker.py'
 
@@ -51,7 +51,7 @@ class BaseTestCase(TestCase):
         rule_r = self.session.query(RuleEntity).filter_by(
             rule_code=RULE_CODE_F_L_D_R).one_or_none()
         rule_g = self.session.query(RuleEntity).filter_by(
-            rule_code=RULE_CODE_F_L_D_G).one_or_none()
+            rule_code=RULE_CODE_F_L_D_S).one_or_none()
 
         if rule_r is None:
             RuleEntity.create(
@@ -61,8 +61,8 @@ class BaseTestCase(TestCase):
 
         if rule_g is None:
             RuleEntity.create(
-                rule_code=RULE_CODE_F_L_D_G,
-                rule_description='First Last DOB Race',
+                rule_code=RULE_CODE_F_L_D_S,
+                rule_description='First Last DOB Sex',
                 rule_added_at=added_date)
 
         # self.assertEquals(2, rule.id)

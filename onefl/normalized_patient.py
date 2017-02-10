@@ -36,8 +36,8 @@ class NormalizedPatient():
         self.pat_birth_date = utils.format_date_as_string(
             kwargs.get('pat_birth_date'), utils.FORMAT_DATABASE_DATE
         )
-        self.pat_gender = utils.prepare_for_hashing(
-            kwargs.get('pat_gender')
+        self.pat_sex = utils.prepare_for_hashing(
+            kwargs.get('pat_sex')
         )
         self.pat_race = utils.prepare_for_hashing(
             kwargs.get('pat_race')
@@ -62,5 +62,5 @@ class NormalizedPatient():
             "pat_first_name: {0.pat_first_name}, " \
             "pat_last_name: {0.pat_last_name}, " \
             "pat_birth_date: {0.pat_birth_date}, " \
-            "pat_gender: {0.pat_gender}, " \
+            "pat_sex: {0.pat_sex}, " \
             "pat_race: {0.pat_race}>".format(self)
