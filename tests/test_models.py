@@ -15,7 +15,7 @@ from onefl import utils
 from onefl.models.partner_entity import PartnerEntity  # noqa
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity
-from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_G  # noqa
+from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S  # noqa
 
 
 class TestModels(BaseTestCase):

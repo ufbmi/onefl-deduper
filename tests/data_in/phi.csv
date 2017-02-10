@@ -1,4 +1,4 @@
-patid	first	last	dob	gender	race
+patid	first	last	dob	sex	race
 01	aly	bee	1910-01-01	f	
 02	aly	cee	1910-01-01		white
 03	aly	dee	1910-01-01	f	white

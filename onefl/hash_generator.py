@@ -36,7 +36,7 @@ class HashGenerator():
             pat_first_name=ser['first'],
             pat_last_name=ser['last'],
             pat_birth_date=ser['dob'],
-            pat_gender=ser['gender'],
+            pat_sex=ser['sex'],
             pat_race=ser['race']
         )
         # cls.log.info("Patient: {}".format(patient))
@@ -119,8 +119,8 @@ class HashGenerator():
 
         Columns:
             - patid
-            - sha_rule_1 (first_last_dob_gender)
-            - sha_rule_2 (first_last_dob_race)
+            - sha_rule_1 (first_last_dob_race)
+            - sha_rule_2 (first_last_dob_sex)
 
         """
         cls._validate_config(config)
