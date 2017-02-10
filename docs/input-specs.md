@@ -5,17 +5,17 @@ the `hasher` component requires the input csv file to conform to a specific
 format.
 
 The expected column headers need to be:
-`patid`, `first`, `last`, `dob`, `gender`, `race`
+`patid`, `first`, `last`, `dob`, `sex`, `race`
 
 The `patid` column should match the values sent to our SFTP server in the
 demographics file during the regular data submissions. The date of birth 
 column must be in the `YYYY-MM-DD` format.
 
-In addition to that, the `gender` and `race` columns must be **at most two 
+In addition to that, the `sex` and `race` columns must be **at most two 
 characters** as described in the PCORI Common Data Model 3.0 
 [official document](http://www.pcornet.org/wp-content/uploads/2014/07/2015-07-29-PCORnet-Common-Data-Model-v3dot0-RELEASE.pdf)
 
-- `gender`
+- `sex`
 
     Allowed values:
 

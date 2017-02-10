@@ -67,7 +67,7 @@ the initial testing it is fine to leave it empty
         $ vim ~/deduper/settings_hasher.py
 
 - generate an example input file called `phi.csv` with the following header:
-`patid`, `first`, `last`, `dob`, `gender`, `race`
+`patid`, `first`, `last`, `dob`, `sex`, `race`
 
 Notes:
 

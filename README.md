@@ -26,7 +26,7 @@ as in the diagram below:
     |   +--------------------------+                       +--------------------------+
     |   |   PHI_DATA.csv           | ----> hasher.py ----> |    HASHES.csv            |
     |   | patid, first, last,      |                       | patid, F_L_D_G, F_L_D_R  |
-    |   | dob, gender, race        |                       |                          |
+    |   | dob, sex, race           |                       |                          |
     |   +--------------------------+                       +--------------------------+
     |                                                            ||
     +- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - || - - - - - -
