@@ -25,7 +25,7 @@ pd.set_option('display.width', 1500)
 
 FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
 FLAG_HASH_FOUND = 1  # 'hash found'
-FLAG_HASH_FOUND_BUT_IGNORED = 2  # 'hash found but ignored'
+# FLAG_HASH_FOUND_BUT_IGNORED = 2  # 'hash found but ignored'
 
 
 class LinkGenerator():
@@ -114,6 +114,14 @@ class LinkGenerator():
     def _process_two_hashes(cls, patid, pat_hashes, hash_uuid_lut,
                             rules_cache, config, session,
                             partner_code):
+        """
+        We have to cover 2^2 + 1 = 5 cases:
+            1. h1 => 0, h2 => 0     - create new UUID and use for both rows
+            2. h1 => 0, h2 => 1  \  _ reuse a UUID
+            3. h1 => 1, h2 => 0  /
+            4. h1 => 1, h2 => 1 and UUIDs match - reuse a UUID
+            5. h1 => 1, h2 => 1 and the corresponding UUIDs do NOT match
+        """
         links = {}
         added_date = datetime.now()
 
@@ -124,16 +132,17 @@ class LinkGenerator():
         existing_link_1 = hash_uuid_lut.get(ahash_1)
         existing_link_2 = hash_uuid_lut.get(ahash_2)
 
-        if existing_link_1 is None:
-            # respect the main rule - create two links with a `fresh` UUID
+        both_not_found = existing_link_1 is None and existing_link_2 is None
+        only_one_found = ((existing_link_1 is None and
+                           existing_link_2 is not None) or
+                          (existing_link_1 is not None and
+                           existing_link_2 is None))
+
+        if both_not_found:
+            # create two links with a `fresh` UUID
             binary_uuid = utils.get_uuid_bin()
             flag_1 = FLAG_HASH_NOT_FOUND
-
-            # Flag 2 is set depending on presence of the link in the database
-            if existing_link_2 is None:
-                flag_2 = FLAG_HASH_NOT_FOUND
-            else:
-                flag_2 = FLAG_HASH_FOUND_BUT_IGNORED
+            flag_2 = FLAG_HASH_NOT_FOUND
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
@@ -153,30 +162,16 @@ class LinkGenerator():
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
 
-        if existing_link_1 is not None:
-            # respect the main rule - create two links with an `existing` UUID
-            flag_1 = FLAG_HASH_FOUND
-
-            if existing_link_2 is None:
-                flag_2 = FLAG_HASH_NOT_FOUND
-            else:
-                if (existing_link_1.linkage_uuid ==
-                        existing_link_2.linkage_uuid):
-                    # consensus hence no problem
-                    flag_2 = FLAG_HASH_FOUND
-                else:
-                    # the UUID's do not match - we need to investigate
-                    to_investigate = {
-                        ahash_1: existing_link_1.friendly_uuid(),
-                        ahash_2: existing_link_2.friendly_uuid()
-                    }
-                    cls.log.warning("Hashes of the patid: {} are linked "
-                                    "to two distinct UUIDs: {}"
-                                    .format(patid, to_investigate))
-                    return links, to_investigate
-
+        elif only_one_found:
             # reuse the existing UUID
-            binary_uuid = existing_link_1.linkage_uuid
+            if existing_link_1 is not None:
+                binary_uuid = existing_link_1.linkage_uuid
+                flag_1 = FLAG_HASH_FOUND
+                flag_2 = FLAG_HASH_NOT_FOUND
+            else:
+                binary_uuid = existing_link_2.linkage_uuid
+                flag_1 = FLAG_HASH_NOT_FOUND
+                flag_1 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
@@ -195,6 +190,39 @@ class LinkGenerator():
                 linkage_uuid=binary_uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
+        else:
+            # both are found - reuse the existing UUID
+            binary_uuid = existing_link_1.linkage_uuid
+            new_link_1 = LinkageEntity.create(
+                partner_code=partner_code,
+                rule_id=rules_cache.get(rule_code_1),
+                linkage_patid=patid,
+                linkage_flag=FLAG_HASH_FOUND,
+                linkage_uuid=binary_uuid,
+                linkage_hash=unhexlify(ahash_1.encode('utf-8')),
+                linkage_added_at=added_date)
+
+            # UUID's match - insert row for the second hash too
+            if (existing_link_1.linkage_uuid ==
+                    existing_link_2.linkage_uuid):
+                # consensus hence insert row for hash 2 too
+                new_link_2 = LinkageEntity.create(
+                    partner_code=partner_code,
+                    rule_id=rules_cache.get(rule_code_2),
+                    linkage_patid=patid,
+                    linkage_flag=FLAG_HASH_FOUND,
+                    linkage_uuid=binary_uuid,
+                    linkage_hash=unhexlify(ahash_1.encode('utf-8')),
+                    linkage_added_at=added_date)
+            else:
+                # the UUID's do not match - we need to investigate
+                to_investigate = {
+                    ahash_2: existing_link_2.friendly_uuid()
+                }
+                cls.log.warning("Hashes of the patid: {} are linked "
+                                "to two distinct UUIDs: {}"
+                                .format(patid, to_investigate))
+                return links, to_investigate
 
         links[ahash_1] = new_link_1
         links[ahash_2] = new_link_2

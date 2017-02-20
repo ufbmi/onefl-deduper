@@ -18,6 +18,7 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 +------------------+---------------------+------+-----+---------+
 | linkage_id       | bigint(20) unsigned | NO   | PRI | NULL    |
 | partner_code     | varchar(3)          | NO   | MUL | NULL    |
+| rule_id          |                     | NO   | MUL | NULL    |
 | linkage_patid    | varchar(128)        | NO   | MUL | NULL    |
 | linkage_flag     | int                 | NO   | MUL | NULL    |
 | linkage_uuid     | binary(16)          | NO   | MUL | NULL    |
