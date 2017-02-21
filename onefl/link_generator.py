@@ -101,7 +101,10 @@ class LinkGenerator():
                 linkage_hash=binary_hash,
                 linkage_added_at=datetime.now())
 
-            links = {ahash: new_link}
+            if rule_code == RULE_CODE_F_L_D_R:
+                links = {ahash: new_link}
+            else:
+                links = {'': None, ahash: new_link}
 
         elif len(pat_hashes) == 2:
             links, to_investigate = cls._process_two_hashes(
@@ -123,6 +126,7 @@ class LinkGenerator():
             5. h1 => 1, h2 => 1 and the corresponding UUIDs do NOT match
         """
         links = {}
+        to_investigate = {}
         added_date = datetime.now()
 
         # TODO: This is ugly but we can make (if needed)
@@ -219,10 +223,13 @@ class LinkGenerator():
                 to_investigate = {
                     ahash_2: existing_link_2.friendly_uuid()
                 }
-                cls.log.warning("Hashes of the patid: {} are linked "
-                                "to two distinct UUIDs: {}"
-                                .format(patid, to_investigate))
-                return links, to_investigate
+                cls.log.warning("Hashes of the patid [{}] are linked"
+                                " to two distinct UUIDs: {}, {}."
+                                " We linked only the first hash!"
+                                .format(patid,
+                                        existing_link_1.friendly_uuid(),
+                                        existing_link_2.friendly_uuid()))
+                return {ahash_1: new_link_1}, to_investigate
 
         links[ahash_1] = new_link_1
         links[ahash_2] = new_link_2
@@ -261,8 +268,8 @@ class LinkGenerator():
             i = 0
             for ahash, link in links.items():
                 i += 1
-                # print("Hash: {} link: {}".format(ahash, link))
-                df.loc[df['PATID'] == patid, 'UUID'] = link.friendly_uuid()
+                df.loc[df['PATID'] == patid, 'UUID'] = (link.friendly_uuid()
+                                                        if link else '')
                 df.loc[df['PATID'] == patid, "hash_{}".format(i)] = ahash
 
             if len(pat_hashes) < 1:
@@ -270,7 +277,7 @@ class LinkGenerator():
                 cls.log.warning("Patient [{}] has no hashes. "
                                 "No UUID was created!".format(patid))
             else:
-                cls.log.info("Created {} links for patid: {}"
+                cls.log.debug("Created {} links for patid: {}"
                              .format(len(links), patid))
         cls.log.info("{} out of {} patients did not have any hashes: {}"
                      .format(len(patients_with_no_hashes), len(df),
