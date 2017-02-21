@@ -1,9 +1,15 @@
 # Change Log
 
 
-## [0.0.2] - unreleased yet
-### Adding...
-* `gen_ofid.py` - script for saving hashes in the OneFlorida database
+## [0.0.3] - unreleased yet
+
+
+
+## [0.0.2] - 2017-02-09
+### Added
+* hasher logic for validating `race` and `sex`
+* linker `rule` and `flag` columns
+* linker code for enforcing the dominant rule
 
 
 ## [0.0.1c] - 2017-01-11
