@@ -54,7 +54,6 @@ class NormalizedPatient():
             if not getattr(self, attr, None):
                 return False
 
-        print("req attrs: {}".format(required_attributes))
         # skip hash generation if sex or race
         # have one of the "missing" values NI, UN, OT
         if ('pat_sex' in required_attributes and
