@@ -7,6 +7,8 @@ Goal: Store functions used for converting PHI data into hashed strings
 
 import os
 import pandas as pd
+import multiprocessing as mp
+import traceback
 from onefl.rules import AVAILABLE_RULES_MAP as rulz
 from onefl import utils
 from onefl.exc import ConfigErr
@@ -15,6 +17,9 @@ from onefl.normalized_patient import NormalizedPatient  # noqa
 pd.set_option('display.width', 1500)
 VALID_RACE_VALS = ['', '01', '02', '03', '04', '05', '06', '07', 'NI', 'UN', 'OT']  # noqa
 VALID_SEX_VALS = ['', 'A', 'F', 'M', 'NI', 'UN', 'OT']
+
+# How many processes to use?
+NUM_CPUS = max(1, mp.cpu_count() - 2)
 
 
 class HashGenerator():
@@ -27,8 +32,9 @@ class HashGenerator():
     @classmethod
     def _process_row_series(cls, ser, rule, pattern, required_attr, config):
         """
-        :param config: dictionary with run-time parameters
+        Compute the sha string for one rule.
 
+        :param config: dictionary with run-time parameters
         :rtype: string
         :return sha_string:
         """
@@ -92,12 +98,12 @@ class HashGenerator():
 
         if not enabled_rules:
             raise ConfigErr('Please verify that the config specifies'
-                            ' the ENABLED_RULES parameter')
+                            ' the `ENABLED_RULES` parameter!')
 
         for rule_code in enabled_rules:
             if rule_code not in rulz:
-                raise ConfigErr('Invalid rule code: [{}]! '
-                                'Available codes are: {}'
+                raise ConfigErr('Invalid rule code: [{}]!'
+                                ' Available codes are: {}'
                                 .format(rule_code, rulz.keys()))
 
     @classmethod
@@ -127,6 +133,7 @@ class HashGenerator():
         """
         cls._validate_config(config)
         EXPECTED_COLS = config['EXPECTED_COLS']
+        ENABLED_RULES = config.get('ENABLED_RULES')
 
         cls.log.info("Using [{}] as source folder".format(inputdir))
         cls.log.info("Using [{}] as salt".format(config['SALT']))
@@ -157,8 +164,12 @@ class HashGenerator():
             cls.log.error("Error: {}".format(exc))
 
         frames = []
+        pool = mp.Pool(processes=NUM_CPUS)
+        jobs = []
 
-        for df_source in reader:
+        for index, df_source in enumerate(reader):
+            cls.log.info("Processing {} lines of frame {}"
+                         .format(config['LINES_PER_CHUNK'], index))
             df_source.fillna('', inplace=True)
 
             for col in EXPECTED_COLS:
@@ -180,14 +191,33 @@ class HashGenerator():
                 raise Exception("The input file contains invalid value for "
                                 "`sex` column. Please review the specs.")
 
-            df = cls._process_frame(df_source, config)
-            frames.append(df)
+            job = utils.apply_async(pool,
+                                    cls._process_frame,
+                                    (df_source, config))
+            jobs.append(job)
 
+        job_count = len(jobs)
+        cls.log.info("Total multiproc jobs: {}".format(job_count))
+
+        # collect the results
+        for index, job in enumerate(jobs):
+            try:
+                frames.append(job.get())
+                if index % 10 == 0:
+                    cls.log.info("Got results for frame {} (out of {})"
+                                 .format(index, job_count))
+            except Exception as exc:
+                cls.log.error("Job [{}] error: {}".format(index, exc))
+                mp.get_log().error(traceback.format_exc())
+
+        pool.close()
+        pool.join()
+        cls.log.info("Got all {} frames. Concatenating...".format(job_count))
         df = pd.concat(frames, ignore_index=True)
 
         # Concatenation can re-order columns so we need to enforce the order
         out_columns = ['PATID']
-        out_columns.extend(config.get('ENABLED_RULES'))
+        out_columns.extend(ENABLED_RULES)
 
         out_file = os.path.join(outputdir, config['OUT_FILE'])
         utils.frame_to_file(df[out_columns], out_file,
@@ -197,4 +227,14 @@ class HashGenerator():
                      .format(out_file,
                              len(df),
                              utils.get_file_size(out_file)))
+
+        # count how many patients did not get a hash generated
+        # query_no_hashes = df.query('m == "" & n == ""')
+        query_no_hashes = ' & '.join(['{} == ""'.format(rule)
+                                      for rule in ENABLED_RULES])
+        df_no_hashes = df.query(query_no_hashes)
+        cls.log.info("The result file contains [{}] patients without hashes."
+                     " See some examples below."
+                     .format(len(df_no_hashes)))
+        cls.log.info(df_no_hashes.head())
         return True

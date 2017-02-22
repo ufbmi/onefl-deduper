@@ -4,20 +4,17 @@ Goal: store utility functions not specific to a module
 @authors:
     Andrei Sura <sura.andrei@gmail.com>
 """
+import binascii
+import dill
 import pandas as pd
 import os
 import sys
 import unicodedata
 # import hashlib
 import uuid
-import binascii
-from hashlib import sha256
 
+from hashlib import sha256
 from csv import QUOTE_NONE, QUOTE_ALL  # noqa
-# from urllib import parse
-# from datetime import timedelta
-# from datetime import datetime
-# from base64 import b64decode, b64encode
 from datetime import datetime
 from datetime import date
 
@@ -227,3 +224,12 @@ def frame_to_file(df, file_name, delimiter="|"):
         log.error("Unable to write frame due: {}".format(exc))
 
     return True
+
+
+def run_dill_encoded(what):
+    fun, args = dill.loads(what)
+    return fun(*args)
+
+
+def apply_async(pool, fun, args, run_dill_encoded=run_dill_encoded):
+    return pool.apply_async(run_dill_encoded, (dill.dumps((fun, args)),))
