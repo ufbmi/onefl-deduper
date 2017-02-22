@@ -7,12 +7,7 @@
 
 
 
-invoke
-mock
 pandas
-pylint
 pyodbc
-pytest-cov
 setuptools-scm
 SQLAlchemy
-tox
