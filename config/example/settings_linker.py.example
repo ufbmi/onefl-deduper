@@ -4,6 +4,7 @@ OUT_DELIMITER = '\t'
 
 IN_FILE = 'phi_hashes.csv'
 OUT_FILE = 'links.csv'
+OUT_FILE_INVESTIGATE = 'hashes_to_investigate.csv'
 
 # How many lines to parse at once
 LINES_PER_CHUNK = 2000

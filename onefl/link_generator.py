@@ -216,7 +216,8 @@ class LinkGenerator():
             else:
                 # the UUID's do not match - we need to investigate
                 to_investigate = {
-                    ahash_2: existing_link_2.linkage_uuid
+                    ahash_2: [existing_link_1.linkage_uuid,
+                              existing_link_2.linkage_uuid]
                 }
                 cls.log.warning("Hashes of the patid [{}] are linked"
                                 " to two distinct UUIDs: {}, {}."
@@ -238,6 +239,7 @@ class LinkGenerator():
         # Init an empty frame and copy the patid from the source
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
+        investigations = []
         hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
         mapped_hashes = {ahash: link.linkage_uuid
                          for ahash, link in hash_uuid_lut.items()
@@ -260,6 +262,9 @@ class LinkGenerator():
                 rules_cache, config, session,
                 partner_code)
 
+            if len(to_investigate) > 0:
+                investigations.append(to_investigate)
+
             i = 0
             for ahash, link in links.items():
                 i += 1
@@ -273,11 +278,11 @@ class LinkGenerator():
                                 "No UUID was created!".format(patid))
             else:
                 cls.log.debug("Created {} links for patid: {}"
-                             .format(len(links), patid))
-        cls.log.info("{} out of {} patients did not have any hashes: {}"
-                     .format(len(patients_with_no_hashes), len(df),
-                             patients_with_no_hashes))
-        return df
+                              .format(len(links), patid))
+        cls.log.warning("{} out of {} patients did not have any hashes: {}"
+                        .format(len(patients_with_no_hashes), len(df),
+                                patients_with_no_hashes))
+        return df, investigations
 
     @classmethod
     def _validate_config(cls, config):
@@ -327,21 +332,31 @@ class LinkGenerator():
             cls.log.error("Error: {}".format(exc))
 
         frames = []
+        investigations = []
 
         for df_source in reader:
             df_source.fillna('', inplace=True)
             # The magic happens here...
-            df = cls._process_frame(config, session, df_source, partner)
-
+            df, to_investigate = cls._process_frame(config, session, df_source,
+                                                    partner)
             if SAVE_OUT_FILE:
                 frames.append(df)
+                investigations.extend(to_investigate)
 
         if SAVE_OUT_FILE:
             df = pd.concat(frames, ignore_index=True)
             out_file = os.path.join(outputdir, config['OUT_FILE'])
+            out_file_investigate = os.path.join(outputdir,
+                                                config['OUT_FILE_INVESTIGATE'])
             utils.frame_to_file(df, out_file,
                                 delimiter=config['OUT_DELIMITER'])
             cls.log.info("Wrote output file: {} ({} data rows, {})"
                          .format(
                              out_file, len(df), utils.get_file_size(out_file)))
+
+            with open(out_file_investigate, 'w') as invf:
+                for line in investigations:
+                    invf.write("{}\n".format(line))
+            cls.log.info("Wrote hashes that need investigation to {}"
+                         .format(out_file_investigate))
         return True
