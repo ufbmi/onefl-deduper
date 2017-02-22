@@ -5,6 +5,7 @@ import os
 import logging
 import logging.config
 from onefl.version import __version__
+CONFIG_FILE = 'config/logs.cfg'
 
 
 def get_figlet(name):
@@ -36,8 +37,8 @@ def get_a_logger(name):
 
     :param name: string used for naming the logger
     """
-    basedir, f = os.path.split(__file__)
-    log_conf = os.path.join(os.path.dirname(basedir), "config/logs.cfg")
+    cwd = os.getcwd()
+    log_conf = os.path.join(cwd, CONFIG_FILE)
 
     if os.path.exists(log_conf):
         logging.config.fileConfig(log_conf)
@@ -58,6 +59,7 @@ def get_a_logger(name):
             '- %(filename)s+%(lineno)d: %(message)s'
         logging.basicConfig(format=lformat, level=logging.INFO)
         log = logging.getLogger(name)
-        log.warn("logging was configured using defaults")
+        log.info("Logging was configured using defaults. "
+                 " To change that please use {} .".format(CONFIG_FILE))
 
     return log
