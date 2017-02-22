@@ -25,7 +25,7 @@ class TestModels(BaseTestCase):
 
     def create_links(self):
         """ Verify we can store LINKAGE rows """
-        pers_uuid = utils.get_uuid_bin()
+        pers_uuid = utils.get_uuid()
 
         # For the real code we cun just copy the
         ahash = binascii.unhexlify('2B2D67AED8D511E6A41AF45C898E9B67'.encode())

@@ -55,11 +55,6 @@ class LinkGenerator():
                      .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
-        # distinct_uuids = {link.friendly_uuid() for link in
-        #                   hash_uuid_lut.values() if link is not None}
-
-        # cls.log.info("Found {} distinct UUID's from {} hashes."
-        #              .format(len(distinct_uuids), len(hashes)))
 
         return hash_uuid_lut
 
@@ -85,11 +80,11 @@ class LinkGenerator():
 
             if existing_link is None:
                 # create new UUID
-                binary_uuid = utils.get_uuid_bin()
+                uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
                 # reuse the existing UUID
-                binary_uuid = existing_link.linkage_uuid
+                uuid = existing_link.linkage_uuid
                 flag = FLAG_HASH_FOUND
 
             new_link = LinkageEntity.create(
@@ -97,7 +92,7 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code),  # we need the rule_id here
                 linkage_patid=patid,
                 linkage_flag=flag,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=binary_hash,
                 linkage_added_at=datetime.now())
 
@@ -144,7 +139,7 @@ class LinkGenerator():
 
         if both_not_found:
             # create two links with a `fresh` UUID
-            binary_uuid = utils.get_uuid_bin()
+            uuid = utils.get_uuid()
             flag_1 = FLAG_HASH_NOT_FOUND
             flag_2 = FLAG_HASH_NOT_FOUND
 
@@ -153,7 +148,7 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
                 linkage_flag=flag_1,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
@@ -162,18 +157,18 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
                 linkage_flag=flag_2,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
 
         elif only_one_found:
             # reuse the existing UUID
             if existing_link_1 is not None:
-                binary_uuid = existing_link_1.linkage_uuid
+                uuid = existing_link_1.linkage_uuid
                 flag_1 = FLAG_HASH_FOUND
                 flag_2 = FLAG_HASH_NOT_FOUND
             else:
-                binary_uuid = existing_link_2.linkage_uuid
+                uuid = existing_link_2.linkage_uuid
                 flag_1 = FLAG_HASH_NOT_FOUND
                 flag_1 = FLAG_HASH_FOUND
 
@@ -182,7 +177,7 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
                 linkage_flag=flag_1,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
@@ -191,18 +186,18 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
                 linkage_flag=flag_2,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
         else:
             # both are found - reuse the existing UUID
-            binary_uuid = existing_link_1.linkage_uuid
+            uuid = existing_link_1.linkage_uuid
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
                 linkage_flag=FLAG_HASH_FOUND,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
@@ -215,20 +210,20 @@ class LinkGenerator():
                     rule_id=rules_cache.get(rule_code_2),
                     linkage_patid=patid,
                     linkage_flag=FLAG_HASH_FOUND,
-                    linkage_uuid=binary_uuid,
+                    linkage_uuid=uuid,
                     linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                     linkage_added_at=added_date)
             else:
                 # the UUID's do not match - we need to investigate
                 to_investigate = {
-                    ahash_2: existing_link_2.friendly_uuid()
+                    ahash_2: existing_link_2.linkage_uuid
                 }
                 cls.log.warning("Hashes of the patid [{}] are linked"
                                 " to two distinct UUIDs: {}, {}."
                                 " We linked only the first hash!"
                                 .format(patid,
-                                        existing_link_1.friendly_uuid(),
-                                        existing_link_2.friendly_uuid()))
+                                        existing_link_1.linkage_uuid,
+                                        existing_link_2.linkage_uuid))
                 return {ahash_1: new_link_1}, to_investigate
 
         links[ahash_1] = new_link_1
@@ -244,7 +239,7 @@ class LinkGenerator():
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
         hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
-        mapped_hashes = {ahash: link.friendly_uuid()
+        mapped_hashes = {ahash: link.linkage_uuid
                          for ahash, link in hash_uuid_lut.items()
                          if link is not None}
         rules_cache = RuleEntity.get_rules_cache(session)
@@ -268,7 +263,7 @@ class LinkGenerator():
             i = 0
             for ahash, link in links.items():
                 i += 1
-                df.loc[df['PATID'] == patid, 'UUID'] = (link.friendly_uuid()
+                df.loc[df['PATID'] == patid, 'UUID'] = (link.linkage_uuid
                                                         if link else '')
                 df.loc[df['PATID'] == patid, "hash_{}".format(i)] = ahash
 

@@ -52,7 +52,7 @@ def hexlify(val):
     This function is used to display binary data in a friendly format.
 
         .. seealso::
-            :meth:`LinkageEntity:friendly_uuid`
+            :meth:`LinkageEntity:friendly_hash`
 
     Note:
         - Without the decode() the builtin `hexlify` return the bytes for
@@ -65,13 +65,22 @@ def hexlify(val):
     return binascii.hexlify(val).decode()
 
 
-def get_uuid_bin(uuid_text=None):
+def get_uuid_bin():
     """
     Note: the returned value needs to be hexlified to be human readable
     """
-    if not uuid_text:
-        uuid_text = uuid.uuid1()
+    uuid_text = uuid.uuid1()
     return binascii.unhexlify(str(uuid_text).replace('-', '').lower().encode())
+
+
+def get_uuid():
+    """ Generate a PK-friendly uuid"""
+    val = str(uuid.uuid1())
+    return sort_uuid(val)
+
+
+def sort_uuid(val):
+    return val[14:18] + val[9:13] + val[0:8] + val[19:23] + val[24:]
 
 
 def apply_sha256(val):

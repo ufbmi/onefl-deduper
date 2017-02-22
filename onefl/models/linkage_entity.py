@@ -21,7 +21,7 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 | rule_id          |                     | NO   | MUL | NULL    |
 | linkage_patid    | varchar(128)        | NO   | MUL | NULL    |
 | linkage_flag     | int                 | NO   | MUL | NULL    |
-| linkage_uuid     | binary(16)          | NO   | MUL | NULL    |
+| linkage_uuid     | varchar(32)         | NO   | MUL | NULL    |
 | linkage_hash     | binary(32)          | NO   | MUL | NULL    |
 | linkage_added_at | datetime            | NO   | MUL | NULL    |
 +------------------+---------------------+------+-----+---------+
@@ -48,7 +48,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
     linkage_flag = db.Column('LINKAGE_FLAG', db.Integer, nullable=False)
 
     # The generated ID that de-duplicates records
-    linkage_uuid = db.Column('LINKAGE_UUID', db.Binary, nullable=False)
+    linkage_uuid = db.Column('LINKAGE_UUID', db.Text(32), nullable=False)
 
     # The hashed representation of the patient data
     linkage_hash = db.Column('LINKAGE_HASH', db.Binary, nullable=False)
@@ -64,9 +64,6 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
     @staticmethod
     def short_hash(val):
         return val[:8]
-
-    def friendly_uuid(self):
-        return utils.hexlify(self.linkage_uuid)
 
     def friendly_hash(self):
         return utils.hexlify(self.linkage_hash)
@@ -102,10 +99,9 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
             "rule_id: {0.rule_id}, "\
             "linkage_patid: {0.linkage_patid}, "\
             "linkage_flag: {0.linkage_flag}, "\
-            "linkage_uuid: {1}, "\
-            "linkage_hash: {2}, "\
+            "linkage_uuid: {0.linkage_uuid}, "\
+            "linkage_hash: {1}, "\
             "linkage_addded_at: {0.linkage_added_at})>".format(
                 self,
-                binascii.hexlify(self.linkage_uuid),
                 binascii.hexlify(self.linkage_hash)
             )
