@@ -21,7 +21,7 @@ CREATE TABLE dbo.linkage (
     partner_code varchar(3) NOT NULL,
     linkage_patid varchar(128) NOT NULL,
     linkage_flag int NOT NULL,
-    linkage_uuid binary(16) NOT NULL,
+    linkage_uuid varchar(32) NOT NULL,
     linkage_hash binary(32) NOT NULL,
     linkage_added_at datetime NOT NULL,
     constraint fk_linkage_partner_code foreign key (partner_code) references partner (partner_code)
