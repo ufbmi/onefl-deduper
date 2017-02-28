@@ -27,9 +27,9 @@ class RuleEntity(CRUDMixin, DeclarativeBase):
     __tablename__ = 'RULE'
 
     id = db.Column('RULE_ID', db.Integer, primary_key=True)
-    rule_code = db.Column('RULE_CODE', db.Text,
+    rule_code = db.Column('RULE_CODE', db.Text(10),
                           nullable=False, unique=True)
-    rule_description = db.Column('rule_description', db.Text,
+    rule_description = db.Column('RULE_DESCRIPTION', db.Text(255),
                                  nullable=False)
     rule_added_at = db.Column('RULE_ADDED_AT', db.DateTime,
                               nullable=False)
