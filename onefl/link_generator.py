@@ -170,7 +170,7 @@ class LinkGenerator():
             else:
                 uuid = existing_link_2.linkage_uuid
                 flag_1 = FLAG_HASH_NOT_FOUND
-                flag_1 = FLAG_HASH_FOUND
+                flag_2 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
@@ -304,7 +304,8 @@ class LinkGenerator():
         engine = db.get_db_engine(config)
 
         # pass a session object to avoid creating it in the loop
-        session = db.get_db_session(engine, create_tables=True)
+        # TODO: add a method parameter for controlling the `create_table` flag
+        session = db.get_db_session(engine, create_tables=False)
 
         EXPECTED_COLS = config['EXPECTED_COLS']
         SAVE_OUT_FILE = config['SAVE_OUT_FILE']
