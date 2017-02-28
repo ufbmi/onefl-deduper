@@ -25,3 +25,10 @@ VALUES
     ('HCN', 'patid_1', 0, NEWID(), CONVERT(VARBINARY(MAX), 'abc'), GETDATE())
 */
 
+INSERT INTO dbo.RULE
+    (RULE_CODE, RULE_DESCRIPTION, RULE_ADDED_AT)
+VALUES
+    ('F_L_D_R', 'First + Last + DOB + Race', GETDATE()),
+    ('F_L_D_S', 'First + Last + DOB + Sex', GETDATE()),
+    ('NO_HASH', 'No hashes', GETDATE())
+GO

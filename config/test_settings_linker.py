@@ -6,6 +6,7 @@ OUT_DELIMITER = '\t'
 
 IN_FILE = 'phi_hashes.csv'
 OUT_FILE = 'links.csv'
+OUT_FILE_INVESTIGATE = 'hashes_to_investigate.csv'
 SAVE_OUT_FILE = True
 
 # How many lines to parse at once

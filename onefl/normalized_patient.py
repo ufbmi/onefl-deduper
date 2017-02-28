@@ -6,6 +6,7 @@ Authors:
      Andrei Sura <sura.andrei@gmail.com>
 """
 from onefl import utils
+MISSING_VALS = ['NI', 'UN', 'OT']
 
 
 class NormalizedPatient():
@@ -24,7 +25,7 @@ class NormalizedPatient():
     def configure_logger(cls, logger):
         cls.log = logger
 
-    def __init__(self,  *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.patid = kwargs.get('patid')
 
         self.pat_first_name = utils.prepare_for_hashing(
@@ -51,9 +52,18 @@ class NormalizedPatient():
         # TODO: should we check for minimum length of each string?
         for attr in required_attributes:
             if not getattr(self, attr, None):
-                NormalizedPatient.log.warning(
-                    "--> Missing value for attr [{}]".format(attr))
                 return False
+
+        # skip hash generation if sex or race
+        # have one of the "missing" values NI, UN, OT
+        if ('pat_sex' in required_attributes and
+                self.pat_sex.upper() in MISSING_VALS):
+            return False
+
+        if ('pat_race' in required_attributes and
+                self.pat_race.upper() in MISSING_VALS):
+            return False
+
         return True
 
     def __repr__(self):

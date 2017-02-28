@@ -19,13 +19,20 @@ Notes:
 CREATE TABLE dbo.linkage (
     linkage_id bigint IDENTITY(1,1) NOT NULL primary key,
     partner_code varchar(3) NOT NULL,
+    rule_id int NOT NULL,
     linkage_patid varchar(128) NOT NULL,
     linkage_flag int NOT NULL,
-    linkage_uuid binary(16) NOT NULL,
+    linkage_uuid varchar(32) NOT NULL,
     linkage_hash binary(32) NOT NULL,
     linkage_added_at datetime NOT NULL,
-    constraint fk_linkage_partner_code foreign key (partner_code) references partner (partner_code)
+    constraint fk_linkage_partner_code foreign key (partner_code) references partner (partner_code),
+    constraint fk_linkage_rule_id foreign key (rule_id) references [rule] (rule_id)
 )
+GO
+
+CREATE NONCLUSTERED INDEX ix_linkage_partner_code
+    ON dbo.linkage ( partner_code )
+    WITH( STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
 
 CREATE NONCLUSTERED INDEX ix_linkage_linkage_patid

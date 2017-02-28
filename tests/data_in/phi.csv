@@ -14,4 +14,4 @@ patid	first	last	dob	sex	race
 10	bob	dee	1900-02-03	A	04
 11	bob	dee	1901-02-03	NI	04
 12	Bob	Dee	1901-02-03	UN	04
-13	Bob	Dee	1901-02-03	OT	04
+13	Bob	Dee	1901-02-03	OT	NI

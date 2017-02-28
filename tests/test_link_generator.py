@@ -37,6 +37,14 @@ class TestLinkGenerator(BaseTestCase):
         outputdir = 'tests/data_out'
         config = Config(root_path='.', defaults={})
         config.from_pyfile(SETTINGS_FILE)
+
+        # Remove the old file
+        file_name_actual = os.path.join(outputdir, 'links.csv')
+
+        try:
+            os.remove(file_name_actual)
+        except Exception:
+            pass
         result = LinkGenerator.generate(config, inputdir, outputdir,
                                         partner='UFH')
         self.assertTrue(result)
@@ -44,13 +52,14 @@ class TestLinkGenerator(BaseTestCase):
         # Check if the reference file exists
         file_name = os.path.join(inputdir, 'links.csv')
         exists = check_file_exists(ask=False, file_name=file_name)
-        self.assertTrue(exists)
+        self.assertTrue(exists, "Reference file does not exist: {}"
+                        .format(file_name))
 
         # read the reference frame
         df_expected = utils.frame_from_file(file_name, delimiter=DELIMITER)
 
         # read the frame produced by calling `generate()`
-        file_name_actual = os.path.join(outputdir, 'links.csv')
+
         df_actual = utils.frame_from_file(file_name_actual,
                                           delimiter=DELIMITER)
 
@@ -60,17 +69,26 @@ class TestLinkGenerator(BaseTestCase):
         uuids_actual.update(df_actual['UUID'].tolist())
         uuids_expected.update(df_expected['UUID'].tolist())
 
+        print("Actual UUIDs found in {}: {}\n{}"
+              .format(file_name_actual, len(uuids_actual),
+                      sorted(uuids_actual)))
+        print("Expected UUIDs found in {}: {}\n{}"
+              .format(file_name, len(uuids_expected),
+                      sorted(uuids_expected)))
         # compare the numbers of distinct UUIDs
         self.assertEqual(len(uuids_actual), len(uuids_expected))
 
-        # when we run the second time there are rows in the database
-        # so we should get no new UUIDs...
-        result = LinkGenerator.generate(config, inputdir, outputdir,
-                                        partner='FLM')
+        if True:
+            # when we run the second time there are rows in the database
+            # so we should get no new UUIDs...
+            result = LinkGenerator.generate(config, inputdir, outputdir,
+                                            partner='FLM')
 
-        df_actual_2 = utils.frame_from_file(file_name_actual,
-                                            delimiter=DELIMITER)
-        # print(df_actual_2)
+            print("Run the second time to check that the existing links are"
+                  " taken in consideration...")
+            df_actual_2 = utils.frame_from_file(file_name_actual,
+                                                delimiter=DELIMITER)
+            # print(df_actual_2)
 
 
 

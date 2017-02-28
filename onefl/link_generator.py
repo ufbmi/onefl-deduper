@@ -19,7 +19,7 @@ from onefl.exc import ConfigErr
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
-from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S  # noqa
+from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S, RULE_CODE_NO_HASH  # noqa
 
 pd.set_option('display.width', 1500)
 
@@ -55,11 +55,6 @@ class LinkGenerator():
                      .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
-        # distinct_uuids = {link.friendly_uuid() for link in
-        #                   hash_uuid_lut.values() if link is not None}
-
-        # cls.log.info("Found {} distinct UUID's from {} hashes."
-        #              .format(len(distinct_uuids), len(hashes)))
 
         return hash_uuid_lut
 
@@ -73,11 +68,24 @@ class LinkGenerator():
         links = {}
         to_investigate = {}
 
-        # keep the hashes in the order defined by the rules
-        # pat_hashes = sorted({row[rule] for rule in rules if row[rule] != ''})
-        # pat_hashes = {rule: row[rule] for rule in rules if row[rule] != ''}
+        if len(pat_hashes) == 0:
+            cls.log.warn("Patient [{}] does not have any hashes"
+                         .format(patid))
+            # create a link anyway
+            uuid = utils.get_uuid()
+            flag = FLAG_HASH_NOT_FOUND
 
-        if len(pat_hashes) == 1:
+            new_link = LinkageEntity.create(
+                partner_code=partner_code,
+                rule_id=rules_cache.get(RULE_CODE_NO_HASH),
+                linkage_patid=patid,
+                linkage_flag=flag,
+                linkage_uuid=uuid,
+                linkage_hash=None,
+                linkage_added_at=datetime.now())
+            # TODO: add code to return this special link
+
+        elif len(pat_hashes) == 1:
             # only one hash was received
             rule_code, ahash = pat_hashes.popitem()
             existing_link = hash_uuid_lut.get(ahash)
@@ -85,11 +93,11 @@ class LinkGenerator():
 
             if existing_link is None:
                 # create new UUID
-                binary_uuid = utils.get_uuid_bin()
+                uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
                 # reuse the existing UUID
-                binary_uuid = existing_link.linkage_uuid
+                uuid = existing_link.linkage_uuid
                 flag = FLAG_HASH_FOUND
 
             new_link = LinkageEntity.create(
@@ -97,11 +105,14 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code),  # we need the rule_id here
                 linkage_patid=patid,
                 linkage_flag=flag,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=binary_hash,
                 linkage_added_at=datetime.now())
 
-            links = {ahash: new_link}
+            if rule_code == RULE_CODE_F_L_D_R:
+                links = {ahash: new_link}
+            else:
+                links = {'': None, ahash: new_link}
 
         elif len(pat_hashes) == 2:
             links, to_investigate = cls._process_two_hashes(
@@ -123,6 +134,7 @@ class LinkGenerator():
             5. h1 => 1, h2 => 1 and the corresponding UUIDs do NOT match
         """
         links = {}
+        to_investigate = {}
         added_date = datetime.now()
 
         # TODO: This is ugly but we can make (if needed)
@@ -140,7 +152,7 @@ class LinkGenerator():
 
         if both_not_found:
             # create two links with a `fresh` UUID
-            binary_uuid = utils.get_uuid_bin()
+            uuid = utils.get_uuid()
             flag_1 = FLAG_HASH_NOT_FOUND
             flag_2 = FLAG_HASH_NOT_FOUND
 
@@ -149,7 +161,7 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
                 linkage_flag=flag_1,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
@@ -158,27 +170,27 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
                 linkage_flag=flag_2,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
 
         elif only_one_found:
             # reuse the existing UUID
             if existing_link_1 is not None:
-                binary_uuid = existing_link_1.linkage_uuid
+                uuid = existing_link_1.linkage_uuid
                 flag_1 = FLAG_HASH_FOUND
                 flag_2 = FLAG_HASH_NOT_FOUND
             else:
-                binary_uuid = existing_link_2.linkage_uuid
+                uuid = existing_link_2.linkage_uuid
                 flag_1 = FLAG_HASH_NOT_FOUND
-                flag_1 = FLAG_HASH_FOUND
+                flag_2 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
                 linkage_flag=flag_1,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
@@ -187,18 +199,18 @@ class LinkGenerator():
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
                 linkage_flag=flag_2,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
         else:
             # both are found - reuse the existing UUID
-            binary_uuid = existing_link_1.linkage_uuid
+            uuid = existing_link_1.linkage_uuid
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
                 linkage_flag=FLAG_HASH_FOUND,
-                linkage_uuid=binary_uuid,
+                linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
@@ -211,18 +223,22 @@ class LinkGenerator():
                     rule_id=rules_cache.get(rule_code_2),
                     linkage_patid=patid,
                     linkage_flag=FLAG_HASH_FOUND,
-                    linkage_uuid=binary_uuid,
-                    linkage_hash=unhexlify(ahash_1.encode('utf-8')),
+                    linkage_uuid=uuid,
+                    linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                     linkage_added_at=added_date)
             else:
                 # the UUID's do not match - we need to investigate
                 to_investigate = {
-                    ahash_2: existing_link_2.friendly_uuid()
+                    ahash_2: [existing_link_1.linkage_uuid,
+                              existing_link_2.linkage_uuid]
                 }
-                cls.log.warning("Hashes of the patid: {} are linked "
-                                "to two distinct UUIDs: {}"
-                                .format(patid, to_investigate))
-                return links, to_investigate
+                cls.log.warning("Hashes of the patid [{}] are linked"
+                                " to two distinct UUIDs: {}, {}."
+                                " We linked only the first hash!"
+                                .format(patid,
+                                        existing_link_1.linkage_uuid,
+                                        existing_link_2.linkage_uuid))
+                return {ahash_1: new_link_1}, to_investigate
 
         links[ahash_1] = new_link_1
         links[ahash_2] = new_link_2
@@ -236,8 +252,9 @@ class LinkGenerator():
         # Init an empty frame and copy the patid from the source
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
+        investigations = []
         hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
-        mapped_hashes = {ahash: link.friendly_uuid()
+        mapped_hashes = {ahash: link.linkage_uuid
                          for ahash, link in hash_uuid_lut.items()
                          if link is not None}
         rules_cache = RuleEntity.get_rules_cache(session)
@@ -251,31 +268,32 @@ class LinkGenerator():
         for index, row in df_source.iterrows():
             patid = row['PATID']
             pat_hashes = {rule: row[rule] for rule in rules if row[rule] != ''}
+
+            if len(pat_hashes) < 1:
+                patients_with_no_hashes.append(patid)
+
             cls.log.debug("Parsing row for patient {} with {} hashes"
                           .format(patid, len(pat_hashes)))
             links, to_investigate = cls._process_patient_row(
                 patid, pat_hashes.copy(), hash_uuid_lut,
                 rules_cache, config, session,
                 partner_code)
+            cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
+
+            if len(to_investigate) > 0:
+                investigations.append(to_investigate)
 
             i = 0
             for ahash, link in links.items():
                 i += 1
-                # print("Hash: {} link: {}".format(ahash, link))
-                df.loc[df['PATID'] == patid, 'UUID'] = link.friendly_uuid()
+                df.loc[df['PATID'] == patid, 'UUID'] = (link.linkage_uuid
+                                                        if link else '')
                 df.loc[df['PATID'] == patid, "hash_{}".format(i)] = ahash
 
-            if len(pat_hashes) < 1:
-                patients_with_no_hashes.append(patid)
-                cls.log.warning("Patient [{}] has no hashes. "
-                                "No UUID was created!".format(patid))
-            else:
-                cls.log.info("Created {} links for patid: {}"
-                             .format(len(links), patid))
-        cls.log.info("{} out of {} patients did not have any hashes: {}"
-                     .format(len(patients_with_no_hashes), len(df),
-                             patients_with_no_hashes))
-        return df
+        cls.log.warning("{} out of {} patients are missing both hashes: {}"
+                        .format(len(patients_with_no_hashes), len(df),
+                                patients_with_no_hashes))
+        return df, investigations
 
     @classmethod
     def _validate_config(cls, config):
@@ -297,6 +315,7 @@ class LinkGenerator():
         engine = db.get_db_engine(config)
 
         # pass a session object to avoid creating it in the loop
+        # TODO: add a method parameter for controlling the `create_table` flag
         session = db.get_db_session(engine, create_tables=True)
 
         EXPECTED_COLS = config['EXPECTED_COLS']
@@ -325,21 +344,31 @@ class LinkGenerator():
             cls.log.error("Error: {}".format(exc))
 
         frames = []
+        investigations = []
 
         for df_source in reader:
             df_source.fillna('', inplace=True)
             # The magic happens here...
-            df = cls._process_frame(config, session, df_source, partner)
-
+            df, to_investigate = cls._process_frame(config, session, df_source,
+                                                    partner)
             if SAVE_OUT_FILE:
                 frames.append(df)
+                investigations.extend(to_investigate)
 
         if SAVE_OUT_FILE:
             df = pd.concat(frames, ignore_index=True)
             out_file = os.path.join(outputdir, config['OUT_FILE'])
+            out_file_investigate = os.path.join(outputdir,
+                                                config['OUT_FILE_INVESTIGATE'])
             utils.frame_to_file(df, out_file,
                                 delimiter=config['OUT_DELIMITER'])
             cls.log.info("Wrote output file: {} ({} data rows, {})"
                          .format(
                              out_file, len(df), utils.get_file_size(out_file)))
+
+            with open(out_file_investigate, 'w') as invf:
+                for line in investigations:
+                    invf.write("{}\n".format(line))
+            cls.log.info("Wrote hashes that need investigation to {}"
+                         .format(out_file_investigate))
         return True
