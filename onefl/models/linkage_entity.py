@@ -51,7 +51,9 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
     linkage_uuid = db.Column('LINKAGE_UUID', db.Text(32), nullable=False)
 
     # The hashed representation of the patient data
-    linkage_hash = db.Column('LINKAGE_HASH', db.Binary(64), nullable=False)
+    # We create UUIDs for patients without any hashes
+    # TODO: decide if we would allow to update the hash from NULL to some value
+    linkage_hash = db.Column('LINKAGE_HASH', db.Binary(32), nullable=True)
 
     # timestamp
     linkage_added_at = db.Column('LINKAGE_ADDED_AT', db.DateTime,
