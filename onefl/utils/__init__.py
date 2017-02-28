@@ -4,20 +4,17 @@ Goal: store utility functions not specific to a module
 @authors:
     Andrei Sura <sura.andrei@gmail.com>
 """
+import binascii
+import dill
 import pandas as pd
 import os
 import sys
 import unicodedata
 # import hashlib
 import uuid
-import binascii
-from hashlib import sha256
 
+from hashlib import sha256
 from csv import QUOTE_NONE, QUOTE_ALL  # noqa
-# from urllib import parse
-# from datetime import timedelta
-# from datetime import datetime
-# from base64 import b64decode, b64encode
 from datetime import datetime
 from datetime import date
 
@@ -52,7 +49,7 @@ def hexlify(val):
     This function is used to display binary data in a friendly format.
 
         .. seealso::
-            :meth:`LinkageEntity:friendly_uuid`
+            :meth:`LinkageEntity:friendly_hash`
 
     Note:
         - Without the decode() the builtin `hexlify` return the bytes for
@@ -65,13 +62,22 @@ def hexlify(val):
     return binascii.hexlify(val).decode()
 
 
-def get_uuid_bin(uuid_text=None):
+def get_uuid_bin():
     """
     Note: the returned value needs to be hexlified to be human readable
     """
-    if not uuid_text:
-        uuid_text = uuid.uuid1()
+    uuid_text = uuid.uuid1()
     return binascii.unhexlify(str(uuid_text).replace('-', '').lower().encode())
+
+
+def get_uuid():
+    """ Generate a PK-friendly uuid"""
+    val = str(uuid.uuid1())
+    return sort_uuid(val)
+
+
+def sort_uuid(val):
+    return val[14:18] + val[9:13] + val[0:8] + val[19:23] + val[24:]
 
 
 def apply_sha256(val):
@@ -218,3 +224,12 @@ def frame_to_file(df, file_name, delimiter="|"):
         log.error("Unable to write frame due: {}".format(exc))
 
     return True
+
+
+def run_dill_encoded(what):
+    fun, args = dill.loads(what)
+    return fun(*args)
+
+
+def apply_async(pool, fun, args, run_dill_encoded=run_dill_encoded):
+    return pool.apply_async(run_dill_encoded, (dill.dumps((fun, args)),))

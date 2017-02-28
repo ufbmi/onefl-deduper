@@ -24,6 +24,9 @@ RULE_CODE_F_L_D_R = 'F_L_D_R'
 # First Name + Last Name + DOB + Sex
 RULE_CODE_F_L_D_S = 'F_L_D_S'
 
+# For patients without hashes
+RULE_CODE_NO_HASH = 'NO_HASH'
+
 
 # In order to guarantee correctness we will allow the partners
 # to add to the configuration only values from the map below.

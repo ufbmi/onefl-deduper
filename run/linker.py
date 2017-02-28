@@ -52,7 +52,7 @@ def main():
 
     parser.add_argument(
         '-p', '--partner',
-        default='',
+        required=True,
         help='output directory name')
 
     args = parser.parse_args()

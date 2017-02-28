@@ -25,8 +25,8 @@ class=handlers.RotatingFileHandler
 backupCount=5
 maxBytes=5*1024*1024
 formatter=complex
-# level=INFO
-level=DEBUG
+level=INFO
+# level=DEBUG
 args=('logs/deduper.log',)
 
 [handler_screen]
