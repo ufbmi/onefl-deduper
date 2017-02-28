@@ -78,16 +78,17 @@ class TestLinkGenerator(BaseTestCase):
         # compare the numbers of distinct UUIDs
         self.assertEqual(len(uuids_actual), len(uuids_expected))
 
-        # when we run the second time there are rows in the database
-        # so we should get no new UUIDs...
-        result = LinkGenerator.generate(config, inputdir, outputdir,
-                                        partner='FLM')
+        if True:
+            # when we run the second time there are rows in the database
+            # so we should get no new UUIDs...
+            result = LinkGenerator.generate(config, inputdir, outputdir,
+                                            partner='FLM')
 
-        print("Run the second time to check that the existing links are"
-              " taken in consideration...")
-        df_actual_2 = utils.frame_from_file(file_name_actual,
-                                            delimiter=DELIMITER)
-        # print(df_actual_2)
+            print("Run the second time to check that the existing links are"
+                  " taken in consideration...")
+            df_actual_2 = utils.frame_from_file(file_name_actual,
+                                                delimiter=DELIMITER)
+            # print(df_actual_2)
 
 
 

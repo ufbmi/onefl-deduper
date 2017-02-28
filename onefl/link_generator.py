@@ -68,10 +68,6 @@ class LinkGenerator():
         links = {}
         to_investigate = {}
 
-        # keep the hashes in the order defined by the rules
-        # pat_hashes = sorted({row[rule] for rule in rules if row[rule] != ''})
-        # pat_hashes = {rule: row[rule] for rule in rules if row[rule] != ''}
-
         if len(pat_hashes) == 0:
             cls.log.warn("Patient [{}] does not have any hashes"
                          .format(patid))
@@ -228,7 +224,7 @@ class LinkGenerator():
                     linkage_patid=patid,
                     linkage_flag=FLAG_HASH_FOUND,
                     linkage_uuid=uuid,
-                    linkage_hash=unhexlify(ahash_1.encode('utf-8')),
+                    linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                     linkage_added_at=added_date)
             else:
                 # the UUID's do not match - we need to investigate
@@ -320,7 +316,7 @@ class LinkGenerator():
 
         # pass a session object to avoid creating it in the loop
         # TODO: add a method parameter for controlling the `create_table` flag
-        session = db.get_db_session(engine, create_tables=False)
+        session = db.get_db_session(engine, create_tables=True)
 
         EXPECTED_COLS = config['EXPECTED_COLS']
         SAVE_OUT_FILE = config['SAVE_OUT_FILE']
