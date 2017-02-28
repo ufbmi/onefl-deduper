@@ -8,6 +8,8 @@ Goal: store shortcuts to common tasks
 
 # import sys
 from invoke import task
+from onefl.partner_name import PartnerName
+from onefl.partner_name import VALID_PARTNERS
 
 
 @task
@@ -35,13 +37,13 @@ def hasher(ctx):
 
 
 @task(aliases=['link'])
-def linker(ctx):
+def linker(ctx, partner):
     """ Generate OneFlorida Ids from hashes """
     inputfolder = 'data'
     outputfolder = 'data'
 
-    ctx.run('PYTHONPATH=. python run/linker.py -i {} -o {} '
-            .format(inputfolder, outputfolder))
+    ctx.run('PYTHONPATH=. python run/linker.py -i {} -o {} -p {}'
+            .format(inputfolder, outputfolder, partner))
 
 
 @task
