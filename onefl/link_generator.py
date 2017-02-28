@@ -19,7 +19,7 @@ from onefl.exc import ConfigErr
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
-from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S  # noqa
+from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S, RULE_CODE_NO_HASH  # noqa
 
 pd.set_option('display.width', 1500)
 
@@ -72,7 +72,24 @@ class LinkGenerator():
         # pat_hashes = sorted({row[rule] for rule in rules if row[rule] != ''})
         # pat_hashes = {rule: row[rule] for rule in rules if row[rule] != ''}
 
-        if len(pat_hashes) == 1:
+        if len(pat_hashes) == 0:
+            cls.log.warn("Patient [{}] does not have any hashes"
+                         .format(patid))
+            # create a link anyway
+            uuid = utils.get_uuid()
+            flag = FLAG_HASH_NOT_FOUND
+
+            new_link = LinkageEntity.create(
+                partner_code=partner_code,
+                rule_id=rules_cache.get(RULE_CODE_NO_HASH),
+                linkage_patid=patid,
+                linkage_flag=flag,
+                linkage_uuid=uuid,
+                linkage_hash=None,
+                linkage_added_at=datetime.now())
+            # TODO: add code to return this special link
+
+        elif len(pat_hashes) == 1:
             # only one hash was received
             rule_code, ahash = pat_hashes.popitem()
             existing_link = hash_uuid_lut.get(ahash)
@@ -255,12 +272,17 @@ class LinkGenerator():
         for index, row in df_source.iterrows():
             patid = row['PATID']
             pat_hashes = {rule: row[rule] for rule in rules if row[rule] != ''}
+
+            if len(pat_hashes) < 1:
+                patients_with_no_hashes.append(patid)
+
             cls.log.debug("Parsing row for patient {} with {} hashes"
                           .format(patid, len(pat_hashes)))
             links, to_investigate = cls._process_patient_row(
                 patid, pat_hashes.copy(), hash_uuid_lut,
                 rules_cache, config, session,
                 partner_code)
+            cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
 
             if len(to_investigate) > 0:
                 investigations.append(to_investigate)
@@ -272,14 +294,7 @@ class LinkGenerator():
                                                         if link else '')
                 df.loc[df['PATID'] == patid, "hash_{}".format(i)] = ahash
 
-            if len(pat_hashes) < 1:
-                patients_with_no_hashes.append(patid)
-                cls.log.warning("Patient [{}] has no hashes. "
-                                "No UUID was created!".format(patid))
-            else:
-                cls.log.debug("Created {} links for patid: {}"
-                              .format(len(links), patid))
-        cls.log.warning("{} out of {} patients did not have any hashes: {}"
+        cls.log.warning("{} out of {} patients are missing both hashes: {}"
                         .format(len(patients_with_no_hashes), len(df),
                                 patients_with_no_hashes))
         return df, investigations
