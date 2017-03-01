@@ -4,6 +4,11 @@
 ## [0.0.4] - unreleased yet
 
 
+## [0.0.3a] - 2017-03-01
+### Changed
+ * consider race=07 (refused to answer) the same as UN, thus not generating a hash for rules involving this race value (Jiang Bian)
+
+
 ## [0.0.3] - 2017-02-28 :)
 
 ### Fixed
