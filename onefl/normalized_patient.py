@@ -8,7 +8,7 @@ Authors:
 from onefl import utils
 MISSING_VALS = {
     'general': ['NI', 'UN', 'OT'],
-    'pat_race': ['07'] #07 is refused to answer
+    'pat_race': ['07']  # 07 is refused to answer
 }
 
 
@@ -60,11 +60,12 @@ class NormalizedPatient():
         # skip hash generation if sex or race
         # have one of the "missing" values NI, UN, OT
         if ('pat_sex' in required_attributes and
-                (self.pat_sex.upper() in MISSING_VALS['general'] or self.pat_sex.upper() in MISSING_VALS['pat_sex'] if 'pat_sex' in MISSING_VALS else False)):
+                self.pat_sex.upper() in MISSING_VALS['general']):
             return False
 
         if ('pat_race' in required_attributes and
-                (self.pat_race.upper() in MISSING_VALS['general'] or self.pat_race.upper() in MISSING_VALS['pat_race'] if 'pat_race' in MISSING_VALS else False)):
+                (self.pat_race.upper() in MISSING_VALS['general'] or
+                 self.pat_race.upper() in MISSING_VALS['pat_race'])):
             return False
 
         return True
