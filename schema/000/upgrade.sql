@@ -1,16 +1,53 @@
 
-CREATE TABLE dbo.partner (
-    partner_code varchar(3) primary key,
-    partner_description varchar(255) NOT NULL,
-    partner_added_at datetime NOT NULL
-)
+-- linkage
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'linkage' AND TABLE_SCHEMA = 'dbo')
+    DROP TABLE dbo.linkage
 GO
+
+-- partner
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'partner' AND TABLE_SCHEMA = 'dbo')
+    DROP TABLE dbo.partner
+GO
+
+-- rule
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'rule' AND TABLE_SCHEMA = 'dbo')
+    DROP TABLE dbo.[rule]
+GO
+
+
+CREATE TABLE [dbo].[partner](
+    [partner_code] [varchar](3) NOT NULL,
+    [partner_description] [varchar](255) NOT NULL,
+    [partner_added_at] [datetime] NOT NULL,
+PRIMARY KEY CLUSTERED
+(
+    [partner_code] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+CREATE TABLE [dbo].[rule](
+    [RULE_ID] [int] IDENTITY(1,1) NOT NULL,
+    [RULE_CODE] [varchar](10) NOT NULL,
+    [RULE_DESCRIPTION] [varchar](255) NOT NULL,
+    [RULE_ADDED_AT] [datetime] NOT NULL,
+PRIMARY KEY CLUSTERED
+(
+    [RULE_ID] ASC
+ ) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY],
+UNIQUE NONCLUSTERED
+(
+    [RULE_CODE] ASC
+) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
 
 /*
 Notes:
-	- by combining two 4-bit hex characters into one byte
-	we reduce the storage requirements.
-	This is done in python using `binascii.unhexlify()` function
+    - by combining two 4-bit hex characters into one byte
+    we reduce the storage requirements.
+    This is done in python using `binascii.unhexlify()` function
 
     - the 36-character uuid is stored as 32/2 = 16 binary
     - the 64-character sha256 string is stored as 64/2 = 32 binary
@@ -23,7 +60,7 @@ CREATE TABLE dbo.linkage (
     linkage_patid varchar(128) NOT NULL,
     linkage_flag int NOT NULL,
     linkage_uuid varchar(32) NOT NULL,
-    linkage_hash binary(32) NOT NULL,
+    linkage_hash binary(32) NULL,
     linkage_added_at datetime NOT NULL,
     constraint fk_linkage_partner_code foreign key (partner_code) references partner (partner_code),
     constraint fk_linkage_rule_id foreign key (rule_id) references [rule] (rule_id)
