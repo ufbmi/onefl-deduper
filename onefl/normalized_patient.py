@@ -6,7 +6,10 @@ Authors:
      Andrei Sura <sura.andrei@gmail.com>
 """
 from onefl import utils
-MISSING_VALS = ['NI', 'UN', 'OT']
+MISSING_VALS = {
+    'general': ['NI', 'UN', 'OT'],
+    'pat_race': ['07']  # 07 is refused to answer
+}
 
 
 class NormalizedPatient():
@@ -57,11 +60,12 @@ class NormalizedPatient():
         # skip hash generation if sex or race
         # have one of the "missing" values NI, UN, OT
         if ('pat_sex' in required_attributes and
-                self.pat_sex.upper() in MISSING_VALS):
+                self.pat_sex.upper() in MISSING_VALS['general']):
             return False
 
         if ('pat_race' in required_attributes and
-                self.pat_race.upper() in MISSING_VALS):
+                (self.pat_race.upper() in MISSING_VALS['general'] or
+                 self.pat_race.upper() in MISSING_VALS['pat_race'])):
             return False
 
         return True
