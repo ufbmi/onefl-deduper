@@ -27,6 +27,11 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 +------------------+---------------------+------+-----+---------+
 """
 
+FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
+FLAG_HASH_FOUND = 1  # 'hash found'
+FLAG_SKIP_MATCH = 2  # flag rows which should not participate in matching
+
+
 __all__ = ['LinkageEntity']
 
 
@@ -69,6 +74,12 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
 
     def friendly_hash(self):
         return utils.hexlify(self.linkage_hash)
+
+    def needs_to_skip_match_for_partner(self, partner_code):
+        if (self.partner_code == partner_code or
+                self.linkage_flag == FLAG_SKIP_MATCH):
+            return True
+        return False
 
     @staticmethod
     def init_hash_uuid_lut(session, hashes):

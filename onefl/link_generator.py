@@ -7,6 +7,7 @@ Goal: Lookup hashed strings in the database
 """
 import collections  # noqa
 import os
+import sys
 import pandas as pd
 import pprint  # noqa
 
@@ -16,16 +17,13 @@ from datetime import datetime  # noqa
 from onefl import utils
 from onefl.utils import db
 from onefl.exc import ConfigErr
+from onefl.models.linkage_entity import FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND, FLAG_SKIP_MATCH  # noqa
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
 from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S, RULE_CODE_NO_HASH  # noqa
 
 pd.set_option('display.width', 1500)
-
-FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
-FLAG_HASH_FOUND = 1  # 'hash found'
-# FLAG_HASH_FOUND_BUT_IGNORED = 2  # 'hash found but ignored'
 
 
 class LinkGenerator():
@@ -51,8 +49,8 @@ class LinkGenerator():
         for rule in rules:
             hashes.update(df_source[rule].tolist())
 
-        cls.log.info("Searching UUID's for {} distinct hashes."
-                     .format(len(hashes)))
+        cls.log.debug("Searching UUID's for {} distinct hashes."
+                      .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
 
@@ -96,9 +94,15 @@ class LinkGenerator():
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
-                # reuse the existing UUID
-                uuid = existing_link.linkage_uuid
-                flag = FLAG_HASH_FOUND
+                # If we find a hash from the same source
+                # we ignore it and mark it accordingly
+                if existing_link.needs_to_skip_match_for_partner(partner_code):
+                    uuid = utils.get_uuid()
+                    flag = FLAG_SKIP_MATCH
+                else:
+                    # reuse the existing UUID
+                    uuid = existing_link.linkage_uuid
+                    flag = FLAG_HASH_FOUND
 
             new_link = LinkageEntity.create(
                 partner_code=partner_code,
@@ -126,12 +130,17 @@ class LinkGenerator():
                             rules_cache, config, session,
                             partner_code):
         """
+        Note: a `1` in the comments below indicates that a hash is already in
+            the database!
+
         We have to cover 2^2 + 1 = 5 cases:
             1. h1 => 0, h2 => 0     - create new UUID and use for both rows
             2. h1 => 0, h2 => 1  \  _ reuse a UUID
             3. h1 => 1, h2 => 0  /
-            4. h1 => 1, h2 => 1 and UUIDs match - reuse a UUID
+            4. h1 => 1, h2 => 1 and UUIDs match
+                - reuse a UUID and create two rows
             5. h1 => 1, h2 => 1 and the corresponding UUIDs do NOT match
+                - reuse the UUID but link only the first hash
         """
         links = {}
         to_investigate = {}
@@ -177,13 +186,23 @@ class LinkGenerator():
         elif only_one_found:
             # reuse the existing UUID
             if existing_link_1 is not None:
-                uuid = existing_link_1.linkage_uuid
-                flag_1 = FLAG_HASH_FOUND
                 flag_2 = FLAG_HASH_NOT_FOUND
+
+                if existing_link_1.needs_to_skip_match_for_partner(partner_code):  # noqa
+                    uuid = utils.get_uuid()
+                    flag_1 = FLAG_SKIP_MATCH
+                else:
+                    uuid = existing_link_1.linkage_uuid
+                    flag_1 = FLAG_HASH_FOUND
             else:
-                uuid = existing_link_2.linkage_uuid
                 flag_1 = FLAG_HASH_NOT_FOUND
-                flag_2 = FLAG_HASH_FOUND
+
+                if existing_link_2.needs_to_skip_match_for_partner(partner_code):  # noqa
+                    uuid = utils.get_uuid()
+                    flag_2 = FLAG_SKIP_MATCH
+                else:
+                    uuid = existing_link_2.linkage_uuid
+                    flag_2 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
@@ -203,13 +222,19 @@ class LinkGenerator():
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
         else:
-            # both are found - reuse the existing UUID
-            uuid = existing_link_1.linkage_uuid
+            # both are found
+            if existing_link_1.needs_to_skip_match_for_partner(partner_code):
+                uuid = utils.get_uuid()
+                flag = FLAG_SKIP_MATCH
+            else:
+                uuid = existing_link_1.linkage_uuid
+                flag = FLAG_HASH_FOUND
+
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
-                linkage_flag=FLAG_HASH_FOUND,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -222,7 +247,7 @@ class LinkGenerator():
                     partner_code=partner_code,
                     rule_id=rules_cache.get(rule_code_2),
                     linkage_patid=patid,
-                    linkage_flag=FLAG_HASH_FOUND,
+                    linkage_flag=flag,
                     linkage_uuid=uuid,
                     linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                     linkage_added_at=added_date)
@@ -290,9 +315,12 @@ class LinkGenerator():
                                                         if link else '')
                 df.loc[df['PATID'] == patid, "hash_{}".format(i)] = ahash
 
-        cls.log.warning("{} out of {} patients are missing both hashes: {}"
-                        .format(len(patients_with_no_hashes), len(df),
-                                patients_with_no_hashes))
+        len_missing_both = len(patients_with_no_hashes)
+
+        if len_missing_both > 0:
+            cls.log.warning("Patients with no hashes: {} (out of {}). {}"
+                            .format(len_missing_both, len(df),
+                                    patients_with_no_hashes))
         return df, investigations
 
     @classmethod
@@ -305,7 +333,7 @@ class LinkGenerator():
                             ' the DB_TYPE parameter.')
 
     @classmethod
-    def generate(cls, config, inputdir, outputdir, partner):
+    def generate(cls, config, inputdir, outputdir, partner, ask=True):
         """
         Read the "phi_hashes.csv" file and generate UUID's.
 
@@ -321,6 +349,17 @@ class LinkGenerator():
         EXPECTED_COLS = config['EXPECTED_COLS']
         SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
+
+        cls.log.info("Using [{}] as source folder".format(inputdir))
+        cls.log.info("Using [{}] as source file".format(in_file))
+
+        if ask:
+            confirmed = utils.ask_yes_no(
+                "Continue link procedure to create files in the [{}] folder?"
+                .format(outputdir))
+
+            if not confirmed:
+                sys.exit("If you say so...")
 
         reader = None
 
@@ -345,8 +384,11 @@ class LinkGenerator():
 
         frames = []
         investigations = []
+        count = 0
 
         for df_source in reader:
+            count += 1
+            cls.log.info("Process frame: {}".format(count))
             df_source.fillna('', inplace=True)
             # The magic happens here...
             df, to_investigate = cls._process_frame(config, session, df_source,

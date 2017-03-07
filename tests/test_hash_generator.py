@@ -42,7 +42,7 @@ class TestHashGenerator(unittest.TestCase):
         outputdir = 'tests/data_out'
         config = Config(root_path='.', defaults={})
         config.from_pyfile(SETTINGS_FILE)
-        result = HashGenerator.generate(config, inputdir, outputdir)
+        result = HashGenerator.generate(config, inputdir, outputdir, ask=False)
         self.assertTrue(result)
 
         # Check if the reference file exists

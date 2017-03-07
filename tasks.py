@@ -8,8 +8,11 @@ Goal: store shortcuts to common tasks
 
 # import sys
 from invoke import task
-from onefl.partner_name import PartnerName
+from onefl.partner_name import PartnerName  # noqa
 from onefl.partner_name import VALID_PARTNERS
+
+STATUS_PASS = '✔'
+STATUS_FAIL = '✗'
 
 
 @task
@@ -36,14 +39,36 @@ def hasher(ctx):
             .format(inputfolder, outputfolder))
 
 
-@task(aliases=['link'])
-def linker(ctx, partner):
+@task(aliases=['link'],
+      help={'partner': 'The partner name: {}'.format(VALID_PARTNERS)})
+def linker(ctx, partner, ask=True):
     """ Generate OneFlorida Ids from hashes """
     inputfolder = 'data'
     outputfolder = 'data'
+    opt_ask = '--ask' if ask else ''
 
-    ctx.run('PYTHONPATH=. python run/linker.py -i {} -o {} -p {}'
-            .format(inputfolder, outputfolder, partner))
+    if partner:
+        ctx.run('PYTHONPATH=. python run/linker.py -i {} -o {} -p {} {}'
+                .format(inputfolder, outputfolder, partner, opt_ask))
+    else:
+        print("""
+Usage:
+ inv link --inputdir=dir --outputdir=dir -p=partner
+              """)
+        print("[{}] Please specify a valid partner name"
+              " and input directories.\n"
+              "Available partners: {}"
+              .format(STATUS_FAIL, VALID_PARTNERS))
+
+
+@task
+def link_flm(ctx):
+    linker(ctx, partner=PartnerName.FLM.value)
+
+
+@task
+def link_ufh(ctx):
+    linker(ctx, partner=PartnerName.UFH.value)
 
 
 @task
