@@ -65,7 +65,10 @@ def main():
     config = Config(root_path=ROOT_PATH, defaults={})
     config.from_pyfile(args.config)
     start = time.monotonic()
-    success = HashGenerator.generate(config, args.inputdir, args.outputdir)
+    success = HashGenerator.generate(config,
+                                     args.inputdir,
+                                     args.outputdir,
+                                     args.ask)
     end = time.monotonic()
     elapsed = (end - start)
 

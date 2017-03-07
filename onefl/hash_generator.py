@@ -6,6 +6,7 @@ Goal: Store functions used for converting PHI data into hashed strings
 """
 
 import os
+import sys
 import pandas as pd
 import multiprocessing as mp
 import traceback
@@ -107,7 +108,7 @@ class HashGenerator():
                                 .format(rule_code, rulz.keys()))
 
     @classmethod
-    def generate(cls, config, inputdir, outputdir):
+    def generate(cls, config, inputdir, outputdir, ask=True):
         """
         Read the "phi.csv" file and generate "phi_hashes.csv"
         containing two (or more) sha256 strings for each line
@@ -139,7 +140,13 @@ class HashGenerator():
         cls.log.info("Using [{}] as salt".format(config['SALT']))
         cls.log.info("Expecting input file to contain columns: {}"
                      .format(EXPECTED_COLS))
-        cls.log.info("Using [{}] as destination folder".format(outputdir))
+
+        if ask:
+            confirmed = utils.ask_yes_no(
+                "Continue hash procedure to create files in the [{}] folder?"
+                .format(outputdir))
+            if not confirmed:
+                sys.exit("If you say so...")
 
         in_file = os.path.join(inputdir, config['IN_FILE'])
         reader = None
