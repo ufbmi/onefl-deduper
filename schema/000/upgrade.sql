@@ -57,7 +57,7 @@ CREATE TABLE dbo.linkage (
     linkage_id bigint IDENTITY(1,1) NOT NULL primary key,
     partner_code varchar(3) NOT NULL,
     rule_id int NOT NULL,
-    linkage_patid varchar(128) NOT NULL,
+    linkage_patid varchar(64) NOT NULL,
     linkage_flag int NOT NULL,
     linkage_uuid varchar(32) NOT NULL,
     linkage_hash binary(32) NULL,

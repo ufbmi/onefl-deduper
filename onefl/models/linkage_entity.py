@@ -19,7 +19,7 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 | linkage_id       | bigint(20) unsigned | NO   | PRI | NULL    |
 | partner_code     | varchar(3)          | NO   | MUL | NULL    |
 | rule_id          |                     | NO   | MUL | NULL    |
-| linkage_patid    | varchar(128)        | NO   | MUL | NULL    |
+| linkage_patid    | varchar(64)         | NO   | MUL | NULL    |
 | linkage_flag     | int                 | NO   | MUL | NULL    |
 | linkage_uuid     | varchar(32)         | NO   | MUL | NULL    |
 | linkage_hash     | binary(32)          | NO   | MUL | NULL    |
@@ -49,7 +49,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
                         db.ForeignKey('RULE.RULE_ID'), nullable=False)
 
     # This column stores the original (unscrambled) patid
-    linkage_patid = db.Column('LINKAGE_PATID', db.Text(128), nullable=False)
+    linkage_patid = db.Column('LINKAGE_PATID', db.Text(64), nullable=False)
     linkage_flag = db.Column('LINKAGE_FLAG', db.Integer, nullable=False)
 
     # The generated ID that de-duplicates records
