@@ -45,11 +45,11 @@ GO
 
 /*
 Notes:
+    - the 36-character uuid is stored as 36-4 = 32 varchar
     - by combining two 4-bit hex characters into one byte
     we reduce the storage requirements.
     This is done in python using `binascii.unhexlify()` function
 
-    - the 36-character uuid is stored as 32/2 = 16 binary
     - the 64-character sha256 string is stored as 64/2 = 32 binary
 */
 
