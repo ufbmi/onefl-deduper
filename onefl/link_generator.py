@@ -6,16 +6,18 @@ Goal: Lookup hashed strings in the database
     Andrei Sura <sura.andrei@gmail.com>
 """
 import collections  # noqa
+import multiprocessing as mp
 import os
-import sys
 import pandas as pd
 import pprint  # noqa
+import sys
+import traceback
 
 from binascii import unhexlify
 from datetime import datetime  # noqa
 
 from onefl import utils
-from onefl.utils import db
+from onefl.utils import db as db_utils
 from onefl.exc import ConfigErr
 from onefl.models.linkage_entity import FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND, FLAG_SKIP_MATCH  # noqa
 from onefl.models.linkage_entity import LinkageEntity
@@ -24,6 +26,9 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S, RULE_CODE_NO_HASH  # noqa
 
 pd.set_option('display.width', 1500)
+
+# How many processes to use?
+NUM_CPUS = max(1, mp.cpu_count() - 2)
 
 
 class LinkGenerator():
@@ -188,6 +193,9 @@ class LinkGenerator():
             if existing_link_1 is not None:
                 flag_2 = FLAG_HASH_NOT_FOUND
 
+                # TODO: verify the logic:
+                #   "two distinct patients with same hash from same partner are
+                #   considered different persons"
                 if existing_link_1.needs_to_skip_match_for_partner(partner_code):  # noqa
                     uuid = utils.get_uuid()
                     flag_1 = FLAG_SKIP_MATCH
@@ -271,9 +279,18 @@ class LinkGenerator():
         return links, {}
 
     @classmethod
-    def _process_frame(cls, config, session, df_source, partner_code):
+    def _process_frame(cls, config, engine, df_source, partner_code):
         """
+        Process a fragment of the large file.
+
+        Note: since the `session` object can't be pickled we
+            create the session in every call which is not the best approach.
+
+       .. seealso::
+           :meth:`generate`
+
         """
+        session = db_utils.get_db_session(engine)
         # Init an empty frame and copy the patid from the source
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
@@ -333,19 +350,19 @@ class LinkGenerator():
                             ' the DB_TYPE parameter.')
 
     @classmethod
-    def generate(cls, config, inputdir, outputdir, partner, ask=True):
+    def generate(cls, config, inputdir, outputdir, partner,
+                 ask=True, create_tables=True):
         """
         Read the "phi_hashes.csv" file and generate UUID's.
 
         Optionally save the "hash -> UUID" mapping to "links.csv"
+
+       .. seealso::
+           :meth:`_process_frame`
+
         """
         cls._validate_config(config)
-        engine = db.get_db_engine(config)
-
-        # pass a session object to avoid creating it in the loop
-        # TODO: add a method parameter for controlling the `create_table` flag
-        session = db.get_db_session(engine, create_tables=True)
-
+        engine = db_utils.get_db_engine(config)
         EXPECTED_COLS = config['EXPECTED_COLS']
         SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
@@ -384,24 +401,40 @@ class LinkGenerator():
 
         frames = []
         investigations = []
-        count = 0
+        pool = mp.Pool(processes=NUM_CPUS)
+        jobs = []
 
-        for df_source in reader:
-            count += 1
-            cls.log.info("Process frame: {}".format(count))
+        for index, df_source in enumerate(reader):
+            cls.log.info("Process frame: {}".format(index))
             df_source.fillna('', inplace=True)
             # The magic happens here...
-            df, to_investigate = cls._process_frame(config, session, df_source,
-                                                    partner)
-            if SAVE_OUT_FILE:
-                frames.append(df)
+            job = utils.apply_async(pool,
+                                    cls._process_frame,
+                                    (config, engine, df_source, partner))
+            jobs.append(job)
+
+        job_count = len(jobs)
+        cls.log.info("Total multiproc jobs: {}".format(job_count))
+
+        # collect the results
+        for index, job in enumerate(jobs):
+            try:
+                df_temp, to_investigate = job.get()
+                frames.append(df_temp)
                 investigations.extend(to_investigate)
+            except Exception as exc:
+                cls.log.error("Job [{}] error: {}".format(index, exc))
+                mp.get_log().error(traceback.format_exc())
+
+        pool.close()
+        pool.join()
 
         if SAVE_OUT_FILE:
+            cls.log.info("Got {} frames. Concatenating...".format(job_count))
             df = pd.concat(frames, ignore_index=True)
+
             out_file = os.path.join(outputdir, config['OUT_FILE'])
-            out_file_investigate = os.path.join(outputdir,
-                                                config['OUT_FILE_INVESTIGATE'])
+            out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
             utils.frame_to_file(df, out_file,
                                 delimiter=config['OUT_DELIMITER'])
             cls.log.info("Wrote output file: {} ({} data rows, {})"
@@ -409,8 +442,11 @@ class LinkGenerator():
                              out_file, len(df), utils.get_file_size(out_file)))
 
             with open(out_file_investigate, 'w') as invf:
+
                 for line in investigations:
                     invf.write("{}\n".format(line))
+
             cls.log.info("Wrote hashes that need investigation to {}"
                          .format(out_file_investigate))
+
         return True
