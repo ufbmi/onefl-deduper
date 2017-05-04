@@ -66,14 +66,12 @@ class LinkGenerator():
                              rules_cache, config, session,
                              partner_code):
         """
-        :return OrderedDict: with the newly created linkage entities
+        :return a tuple of OrderedDicts (linkage_entities, sha_to_investigate)
         """
         links = {}
         to_investigate = {}
 
         if len(pat_hashes) == 0:
-            cls.log.warn("Patient [{}] does not have any hashes"
-                         .format(patid))
             # create a link anyway
             uuid = utils.get_uuid()
             flag = FLAG_HASH_NOT_FOUND
@@ -86,7 +84,7 @@ class LinkGenerator():
                 linkage_uuid=uuid,
                 linkage_hash=None,
                 linkage_added_at=datetime.now())
-            # TODO: add code to return this special link
+            links = {'': new_link}
 
         elif len(pat_hashes) == 1:
             # only one hash was received
@@ -369,6 +367,8 @@ class LinkGenerator():
 
         cls.log.info("Using [{}] as source folder".format(inputdir))
         cls.log.info("Using [{}] as source file".format(in_file))
+        cls.log.info("Connection HOST:DB - {}/{}"
+                     .format(config['DB_HOST'], config['DB_NAME']))
 
         if ask:
             confirmed = utils.ask_yes_no(
@@ -405,7 +405,6 @@ class LinkGenerator():
         jobs = []
 
         for index, df_source in enumerate(reader):
-            cls.log.info("Process frame: {}".format(index))
             df_source.fillna('', inplace=True)
             # The magic happens here...
             job = utils.apply_async(pool,
@@ -422,6 +421,10 @@ class LinkGenerator():
                 df_temp, to_investigate = job.get()
                 frames.append(df_temp)
                 investigations.extend(to_investigate)
+
+                if index % 100 == 0:
+                    cls.logger.info("Appended result {} (out of {})"
+                                    .format(index, job_count))
             except Exception as exc:
                 cls.log.error("Job [{}] error: {}".format(index, exc))
                 mp.get_log().error(traceback.format_exc())
