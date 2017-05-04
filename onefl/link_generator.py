@@ -423,7 +423,7 @@ class LinkGenerator():
                 investigations.extend(to_investigate)
 
                 if index % 100 == 0:
-                    cls.logger.info("Appended result {} (out of {})"
+                    cls.log.info("Appended result {} (out of {})"
                                     .format(index, job_count))
             except Exception as exc:
                 cls.log.error("Job [{}] error: {}".format(index, exc))
