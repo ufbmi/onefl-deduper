@@ -30,13 +30,14 @@ def prep_develop(ctx):
 
 
 @task(aliases=['hash'])
-def hasher(ctx):
+def hasher(ctx, ask=True):
     """ Generate hashes from PHI """
     inputfolder = 'data'
     outputfolder = 'data'
+    opt_ask = '--ask' if ask else ''
 
-    ctx.run('PYTHONPATH=. python run/hasher.py -i {} -o {} '
-            .format(inputfolder, outputfolder))
+    ctx.run('PYTHONPATH=. python run/hasher.py -i {} -o {} {}'
+            .format(inputfolder, outputfolder, opt_ask))
 
 
 @task(aliases=['link'],

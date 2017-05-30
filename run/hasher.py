@@ -55,6 +55,10 @@ def main():
         default='.',
         help='output directory name')
 
+    parser.add_argument(
+        '-a', '--ask', action='store_true', default=False,
+        help='ask for confirmation to proceed')
+
     args = parser.parse_args()
 
     if args.version:

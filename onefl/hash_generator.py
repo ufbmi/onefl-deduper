@@ -241,7 +241,7 @@ class HashGenerator():
                                       for rule in ENABLED_RULES])
         df_no_hashes = df.query(query_no_hashes)
         cls.log.info("The result file contains [{}] patients without hashes."
-                     " See some examples below."
                      .format(len(df_no_hashes)))
-        cls.log.info(df_no_hashes.head())
+        if len(df_no_hashes) > 0:
+            cls.log.info(df_no_hashes.head())
         return True
