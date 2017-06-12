@@ -424,7 +424,7 @@ class LinkGenerator():
 
                 if index % 100 == 0:
                     cls.log.info("Appended result {} (out of {})"
-                                    .format(index, job_count))
+                                 .format(index, job_count))
             except Exception as exc:
                 cls.log.error("Job [{}] error: {}".format(index, exc))
                 mp.get_log().error(traceback.format_exc())
