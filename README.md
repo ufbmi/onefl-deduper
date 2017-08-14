@@ -14,8 +14,8 @@ This tool genereates "Linkage Unique Identifiers" (LUID's)
 used for patient de-duplication (aka "Entity Resolution", aka "Record Linkage").
 
 
-The current plan is to have a CSV files as input for two separate scripts
-as in the diagram below:
+The process is to have a CSV files as input for two separate scripts
+as in the diagram below, please note that OneFlorida WILL NOT RECEIVE any data containing PHI:
 
 <pre>
 
