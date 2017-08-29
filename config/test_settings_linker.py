@@ -23,3 +23,5 @@ EXPECTED_COLS.extend(ENABLED_RULES.values())
 
 # =============== Database Settings
 DB_TYPE = 'TEST'
+DB_HOST = ''
+DB_NAME = ''

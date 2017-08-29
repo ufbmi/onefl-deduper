@@ -14,8 +14,10 @@ This tool genereates "Linkage Unique Identifiers" (LUID's)
 used for patient de-duplication (aka "Entity Resolution", aka "Record Linkage").
 
 
-The current plan is to have a CSV files as input for two separate scripts
-as in the diagram below:
+The current implementation is using two CSV files as input for two separate
+scripts as described in the diagram below:
+
+Note: The hashing process insures that "OneFlorida Domain" WILL NOT RECEIVE any data containing PHI
 
 <pre>
 
@@ -63,6 +65,14 @@ as in the diagram below:
     + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 </pre>
 
+Note on PHI: The hasher.py script uses the
+[python implementation](https://github.com/python/cpython/blob/master/Modules/sha256module.c)
+of the [sha256 algorithm](https://docs.python.org/3.6/library/hashlib.html) to
+scramblme the PHI in order to make it imposible to re-identify the patients.
+The sha256 algorithm is certified by the
+[National Institute of Standards and Technology (NIST)](http://csrc.nist.gov/groups/ST/hash/policy.html)
+
+
 # Installation
 
 The two components of the application
@@ -70,12 +80,13 @@ The two components of the application
 order to function. For more details please refer to the
 [docs/installation.md](docs/installation.md)
 
-The format for the input file for the `hasher` component is described in the 
+The format for the input file for the `hasher` component is described in the
 [input-specs.md](docs/input-specs.md) document.
 
 
 # References
 
+- [NIST Secure Hash Standard - nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf](nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf)
 - CAPriCORN: Chicago Area Patient-Centered Outcomes Research Network - https://www.ncbi.nlm.nih.gov/pubmed/24821736
 - http://infolab.stanford.edu/serf/
 - "Swoosh: A Generic Approach to Entity Resolution" - http://link.springer.com/article/10.1007%2Fs00778-008-0098-x

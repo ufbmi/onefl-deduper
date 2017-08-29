@@ -73,7 +73,7 @@ class BaseTestCase(TestCase):
                 rule_description='First Last DOB Sex',
                 rule_added_at=added_date)
 
-        # self.assertEquals(2, rule.id)
+        # self.assertEqual(2, rule.id)
         cache = RuleEntity.get_rules_cache(self.session)
         self.assertIsNotNone(cache)
         print(cache)
@@ -93,7 +93,7 @@ class BaseTestCase(TestCase):
                 partner_added_at=added_date)
 
             print("Saved fresh row: {}\n".format(partner_ufh))
-        self.assertEquals("UFH", partner_ufh.partner_code)
+        self.assertEqual("UFH", partner_ufh.partner_code)
 
         partner_flm = self.session.query(PartnerEntity).filter_by(
             partner_code='FLM').one_or_none()
@@ -103,7 +103,7 @@ class BaseTestCase(TestCase):
                 partner_code="FLM",
                 partner_description="Florida Medicaid",
                 partner_added_at=added_date)
-            self.assertEquals("FLM", partner_flm.partner_code)
+            self.assertEqual("FLM", partner_flm.partner_code)
 
         # verify an error is raised if we try to to find one
         with self.assertRaises(MultipleResultsFound):

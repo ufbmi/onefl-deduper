@@ -1,7 +1,24 @@
 # Change Log
 
 
-## [0.0.4] - unreleased yet
+## [0.0.5] - unreleased yet
+
+
+## [0.0.4] - 2017-08-29
+
+### Fixed
+ * [LINKER]: fix py36 issue due unpicklable SQLAlchemy `engine` (Andrei Sura)
+ * [HASHER]: fix py36 issue with `mp.get_log()` (Andrei Sura)
+
+### Changed
+ * [LINKER]: implement TODO about returning links (Andrei Sura)
+ * [LINKER]: make it use mp (Andrei Sura)
+ * [LINKER]: implement support for marking rows with `FLAG_SKIP_MATCH` when the lookup finds a link with the same hash from the same partner (Andrei Sura)
+ * [Travis CI]: add `dist: trusty` due EOL for Ubuntu Precise 12.04 (Andrei Sura)
+ * [README]: add links to the NIST pages about sha256 (Andrei Sura)
+ * [VALIDATION]: save helper script used for FP/FN calculation (Andrei Sura)
+ * [SCHEMA]: save the queries used for validation (Andrei Sura)
+ * [HASHER]: ask for confirmation before starting the process (Andrei Sura)
 
 
 ## [0.0.3a] - 2017-03-01

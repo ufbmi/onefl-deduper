@@ -55,6 +55,10 @@ def main():
         required=True,
         help='output directory name')
 
+    parser.add_argument(
+        '-a', '--ask', action='store_true', default=False,
+        help='ask for confirmation to proceed')
+
     args = parser.parse_args()
 
     if args.version:
@@ -65,10 +69,13 @@ def main():
     config = Config(root_path=ROOT_PATH, defaults={})
     config.from_pyfile(args.config)
     start = time.monotonic()
-    success = LinkGenerator.generate(config,
-                                     args.inputdir,
-                                     args.outputdir,
-                                     args.partner)
+    success = LinkGenerator.generate(config=config,
+                                     inputdir=args.inputdir,
+                                     outputdir=args.outputdir,
+                                     partner=args.partner,
+                                     ask=args.ask,
+                                     create_tables=False
+                                     )
     success = True
     end = time.monotonic()
     elapsed = (end - start)
