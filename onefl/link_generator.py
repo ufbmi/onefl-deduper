@@ -277,17 +277,18 @@ class LinkGenerator():
         return links, {}
 
     @classmethod
-    def _process_frame(cls, config, engine, df_source, partner_code):
+    def _process_frame(cls, config, df_source, partner_code):
         """
         Process a fragment of the large file.
 
         Note: since the `session` object can't be pickled we
-            create the session in every call which is not the best approach.
+        create the session in every call (see commit bde49a90)
 
        .. seealso::
            :meth:`generate`
 
         """
+        engine = db_utils.get_db_engine(config)
         session = db_utils.get_db_session(engine)
         # Init an empty frame and copy the patid from the source
         df = pd.DataFrame()
@@ -360,7 +361,7 @@ class LinkGenerator():
 
         """
         cls._validate_config(config)
-        engine = db_utils.get_db_engine(config)
+        # engine = db_utils.get_db_engine(config)
         EXPECTED_COLS = config['EXPECTED_COLS']
         SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
@@ -409,7 +410,7 @@ class LinkGenerator():
             # The magic happens here...
             job = utils.apply_async(pool,
                                     cls._process_frame,
-                                    (config, engine, df_source, partner))
+                                    (config, df_source, partner))
             jobs.append(job)
 
         job_count = len(jobs)
