@@ -21,6 +21,8 @@ from datetime import date
 from onefl import logutils
 log = logutils.get_a_logger(__file__)
 
+# Uncomment to enable degug info
+# dill.detect.trace(True)
 
 FORMAT_DATABASE_DATE = "%Y-%m-%d"
 # import locale

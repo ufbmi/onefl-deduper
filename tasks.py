@@ -54,7 +54,7 @@ def linker(ctx, partner, ask=True):
     else:
         print("""
 Usage:
- inv link --inputdir=dir --outputdir=dir -p=partner
+ inv link --inputdir=dir --outputdir=dir -p=partner --ask
               """)
         print("[{}] Please specify a valid partner name"
               " and input directories.\n"
