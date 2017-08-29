@@ -15,9 +15,9 @@ used for patient de-duplication (aka "Entity Resolution", aka "Record Linkage").
 
 
 The current implementation is using two CSV files as input for two separate
-scripts as described in the diagram below:
+scripts as described in the diagram below.
 
-Note: The hashing process insures that "OneFlorida Domain" WILL NOT RECEIVE any data containing PHI
+Note: The hashing process insures that "OneFlorida Domain" WILL NOT RECEIVE any data containing PHI.
 
 <pre>
 

@@ -30,7 +30,7 @@ Python environments.
 
 - install the helper tool for isolating the installation files
 
-        $ pip install virtualenvwrapper
+        $ pip install -U virtualenvwrapper
 
 - activate the isolation environment
 
@@ -47,7 +47,7 @@ as an active python environment
 We are using the standard python distribution model so installation 
 should be relatively simple:
 
-        $ pip install deduper
+        $ pip --no-cache-dir install -U deduper
 
 - create a directory for storing configuration and log files
 
