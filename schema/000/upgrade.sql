@@ -45,11 +45,11 @@ GO
 
 /*
 Notes:
+    - the 36-character uuid is stored as 36-4 = 32 varchar
     - by combining two 4-bit hex characters into one byte
     we reduce the storage requirements.
     This is done in python using `binascii.unhexlify()` function
 
-    - the 36-character uuid is stored as 32/2 = 16 binary
     - the 64-character sha256 string is stored as 64/2 = 32 binary
 */
 
@@ -57,7 +57,7 @@ CREATE TABLE dbo.linkage (
     linkage_id bigint IDENTITY(1,1) NOT NULL primary key,
     partner_code varchar(3) NOT NULL,
     rule_id int NOT NULL,
-    linkage_patid varchar(128) NOT NULL,
+    linkage_patid varchar(64) NOT NULL,
     linkage_flag int NOT NULL,
     linkage_uuid varchar(32) NOT NULL,
     linkage_hash binary(32) NULL,

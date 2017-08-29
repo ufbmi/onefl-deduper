@@ -55,6 +55,10 @@ def main():
         default='.',
         help='output directory name')
 
+    parser.add_argument(
+        '-a', '--ask', action='store_true', default=False,
+        help='ask for confirmation to proceed')
+
     args = parser.parse_args()
 
     if args.version:
@@ -65,7 +69,10 @@ def main():
     config = Config(root_path=ROOT_PATH, defaults={})
     config.from_pyfile(args.config)
     start = time.monotonic()
-    success = HashGenerator.generate(config, args.inputdir, args.outputdir)
+    success = HashGenerator.generate(config,
+                                     args.inputdir,
+                                     args.outputdir,
+                                     args.ask)
     end = time.monotonic()
     elapsed = (end - start)
 

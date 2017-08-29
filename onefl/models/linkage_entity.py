@@ -19,13 +19,18 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 | linkage_id       | bigint(20) unsigned | NO   | PRI | NULL    |
 | partner_code     | varchar(3)          | NO   | MUL | NULL    |
 | rule_id          |                     | NO   | MUL | NULL    |
-| linkage_patid    | varchar(128)        | NO   | MUL | NULL    |
+| linkage_patid    | varchar(64)         | NO   | MUL | NULL    |
 | linkage_flag     | int                 | NO   | MUL | NULL    |
 | linkage_uuid     | varchar(32)         | NO   | MUL | NULL    |
 | linkage_hash     | binary(32)          | NO   | MUL | NULL    |
 | linkage_added_at | datetime            | NO   | MUL | NULL    |
 +------------------+---------------------+------+-----+---------+
 """
+
+FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
+FLAG_HASH_FOUND = 1  # 'hash found'
+FLAG_SKIP_MATCH = 2  # flag rows which should not participate in matching
+
 
 __all__ = ['LinkageEntity']
 
@@ -44,7 +49,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
                         db.ForeignKey('RULE.RULE_ID'), nullable=False)
 
     # This column stores the original (unscrambled) patid
-    linkage_patid = db.Column('LINKAGE_PATID', db.Text(128), nullable=False)
+    linkage_patid = db.Column('LINKAGE_PATID', db.Text(64), nullable=False)
     linkage_flag = db.Column('LINKAGE_FLAG', db.Integer, nullable=False)
 
     # The generated ID that de-duplicates records
@@ -69,6 +74,12 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
 
     def friendly_hash(self):
         return utils.hexlify(self.linkage_hash)
+
+    def needs_to_skip_match_for_partner(self, partner_code):
+        if (self.partner_code == partner_code or
+                self.linkage_flag == FLAG_SKIP_MATCH):
+            return True
+        return False
 
     @staticmethod
     def init_hash_uuid_lut(session, hashes):

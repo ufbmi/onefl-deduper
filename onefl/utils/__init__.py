@@ -233,3 +233,35 @@ def run_dill_encoded(what):
 
 def apply_async(pool, fun, args, run_dill_encoded=run_dill_encoded):
     return pool.apply_async(run_dill_encoded, (dill.dumps((fun, args)),))
+
+
+def ask_yes_no(question, default="yes"):
+    """Ask a yes/no question via raw_input() and return the answer
+    as a boolean.
+
+    :param question: the question displayed to the user
+    :param default: the default answer if the user hits <Enter>
+
+    """
+    valid = {"y": True, "n": False}
+
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = input().lower()[0]
+
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "
+                             "(or 'y' or 'n').\n")

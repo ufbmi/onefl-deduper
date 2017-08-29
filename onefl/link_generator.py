@@ -6,16 +6,20 @@ Goal: Lookup hashed strings in the database
     Andrei Sura <sura.andrei@gmail.com>
 """
 import collections  # noqa
+import multiprocessing as mp
 import os
 import pandas as pd
 import pprint  # noqa
+import sys
+import traceback
 
 from binascii import unhexlify
 from datetime import datetime  # noqa
 
 from onefl import utils
-from onefl.utils import db
+from onefl.utils import db as db_utils
 from onefl.exc import ConfigErr
+from onefl.models.linkage_entity import FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND, FLAG_SKIP_MATCH  # noqa
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
@@ -23,9 +27,8 @@ from onefl.rules import RULE_CODE_F_L_D_R, RULE_CODE_F_L_D_S, RULE_CODE_NO_HASH 
 
 pd.set_option('display.width', 1500)
 
-FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
-FLAG_HASH_FOUND = 1  # 'hash found'
-# FLAG_HASH_FOUND_BUT_IGNORED = 2  # 'hash found but ignored'
+# How many processes to use?
+NUM_CPUS = max(1, mp.cpu_count() - 2)
 
 
 class LinkGenerator():
@@ -51,8 +54,8 @@ class LinkGenerator():
         for rule in rules:
             hashes.update(df_source[rule].tolist())
 
-        cls.log.info("Searching UUID's for {} distinct hashes."
-                     .format(len(hashes)))
+        cls.log.debug("Searching UUID's for {} distinct hashes."
+                      .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
 
@@ -63,14 +66,12 @@ class LinkGenerator():
                              rules_cache, config, session,
                              partner_code):
         """
-        :return OrderedDict: with the newly created linkage entities
+        :return a tuple of OrderedDicts (linkage_entities, sha_to_investigate)
         """
         links = {}
         to_investigate = {}
 
         if len(pat_hashes) == 0:
-            cls.log.warn("Patient [{}] does not have any hashes"
-                         .format(patid))
             # create a link anyway
             uuid = utils.get_uuid()
             flag = FLAG_HASH_NOT_FOUND
@@ -83,7 +84,7 @@ class LinkGenerator():
                 linkage_uuid=uuid,
                 linkage_hash=None,
                 linkage_added_at=datetime.now())
-            # TODO: add code to return this special link
+            links = {'': new_link}
 
         elif len(pat_hashes) == 1:
             # only one hash was received
@@ -96,9 +97,15 @@ class LinkGenerator():
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
-                # reuse the existing UUID
-                uuid = existing_link.linkage_uuid
-                flag = FLAG_HASH_FOUND
+                # If we find a hash from the same source
+                # we ignore it and mark it accordingly
+                if existing_link.needs_to_skip_match_for_partner(partner_code):
+                    uuid = utils.get_uuid()
+                    flag = FLAG_SKIP_MATCH
+                else:
+                    # reuse the existing UUID
+                    uuid = existing_link.linkage_uuid
+                    flag = FLAG_HASH_FOUND
 
             new_link = LinkageEntity.create(
                 partner_code=partner_code,
@@ -126,12 +133,17 @@ class LinkGenerator():
                             rules_cache, config, session,
                             partner_code):
         """
+        Note: a `1` in the comments below indicates that a hash is already in
+            the database!
+
         We have to cover 2^2 + 1 = 5 cases:
             1. h1 => 0, h2 => 0     - create new UUID and use for both rows
             2. h1 => 0, h2 => 1  \  _ reuse a UUID
             3. h1 => 1, h2 => 0  /
-            4. h1 => 1, h2 => 1 and UUIDs match - reuse a UUID
+            4. h1 => 1, h2 => 1 and UUIDs match
+                - reuse a UUID and create two rows
             5. h1 => 1, h2 => 1 and the corresponding UUIDs do NOT match
+                - reuse the UUID but link only the first hash
         """
         links = {}
         to_investigate = {}
@@ -177,13 +189,26 @@ class LinkGenerator():
         elif only_one_found:
             # reuse the existing UUID
             if existing_link_1 is not None:
-                uuid = existing_link_1.linkage_uuid
-                flag_1 = FLAG_HASH_FOUND
                 flag_2 = FLAG_HASH_NOT_FOUND
+
+                # TODO: verify the logic:
+                #   "two distinct patients with same hash from same partner are
+                #   considered different persons"
+                if existing_link_1.needs_to_skip_match_for_partner(partner_code):  # noqa
+                    uuid = utils.get_uuid()
+                    flag_1 = FLAG_SKIP_MATCH
+                else:
+                    uuid = existing_link_1.linkage_uuid
+                    flag_1 = FLAG_HASH_FOUND
             else:
-                uuid = existing_link_2.linkage_uuid
                 flag_1 = FLAG_HASH_NOT_FOUND
-                flag_2 = FLAG_HASH_FOUND
+
+                if existing_link_2.needs_to_skip_match_for_partner(partner_code):  # noqa
+                    uuid = utils.get_uuid()
+                    flag_2 = FLAG_SKIP_MATCH
+                else:
+                    uuid = existing_link_2.linkage_uuid
+                    flag_2 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
@@ -203,13 +228,19 @@ class LinkGenerator():
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
         else:
-            # both are found - reuse the existing UUID
-            uuid = existing_link_1.linkage_uuid
+            # both are found
+            if existing_link_1.needs_to_skip_match_for_partner(partner_code):
+                uuid = utils.get_uuid()
+                flag = FLAG_SKIP_MATCH
+            else:
+                uuid = existing_link_1.linkage_uuid
+                flag = FLAG_HASH_FOUND
+
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
-                linkage_flag=FLAG_HASH_FOUND,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -222,7 +253,7 @@ class LinkGenerator():
                     partner_code=partner_code,
                     rule_id=rules_cache.get(rule_code_2),
                     linkage_patid=patid,
-                    linkage_flag=FLAG_HASH_FOUND,
+                    linkage_flag=flag,
                     linkage_uuid=uuid,
                     linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                     linkage_added_at=added_date)
@@ -246,9 +277,18 @@ class LinkGenerator():
         return links, {}
 
     @classmethod
-    def _process_frame(cls, config, session, df_source, partner_code):
+    def _process_frame(cls, config, engine, df_source, partner_code):
         """
+        Process a fragment of the large file.
+
+        Note: since the `session` object can't be pickled we
+            create the session in every call which is not the best approach.
+
+       .. seealso::
+           :meth:`generate`
+
         """
+        session = db_utils.get_db_session(engine)
         # Init an empty frame and copy the patid from the source
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
@@ -290,9 +330,12 @@ class LinkGenerator():
                                                         if link else '')
                 df.loc[df['PATID'] == patid, "hash_{}".format(i)] = ahash
 
-        cls.log.warning("{} out of {} patients are missing both hashes: {}"
-                        .format(len(patients_with_no_hashes), len(df),
-                                patients_with_no_hashes))
+        len_missing_both = len(patients_with_no_hashes)
+
+        if len_missing_both > 0:
+            cls.log.warning("Patients with no hashes: {} (out of {}). {}"
+                            .format(len_missing_both, len(df),
+                                    patients_with_no_hashes))
         return df, investigations
 
     @classmethod
@@ -305,22 +348,35 @@ class LinkGenerator():
                             ' the DB_TYPE parameter.')
 
     @classmethod
-    def generate(cls, config, inputdir, outputdir, partner):
+    def generate(cls, config, inputdir, outputdir, partner,
+                 ask=True, create_tables=True):
         """
         Read the "phi_hashes.csv" file and generate UUID's.
 
         Optionally save the "hash -> UUID" mapping to "links.csv"
+
+       .. seealso::
+           :meth:`_process_frame`
+
         """
         cls._validate_config(config)
-        engine = db.get_db_engine(config)
-
-        # pass a session object to avoid creating it in the loop
-        # TODO: add a method parameter for controlling the `create_table` flag
-        session = db.get_db_session(engine, create_tables=True)
-
+        engine = db_utils.get_db_engine(config)
         EXPECTED_COLS = config['EXPECTED_COLS']
         SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
+
+        cls.log.info("Using [{}] as source folder".format(inputdir))
+        cls.log.info("Using [{}] as source file".format(in_file))
+        cls.log.info("Connection HOST:DB - {}/{}"
+                     .format(config['DB_HOST'], config['DB_NAME']))
+
+        if ask:
+            confirmed = utils.ask_yes_no(
+                "Continue link procedure to create files in the [{}] folder?"
+                .format(outputdir))
+
+            if not confirmed:
+                sys.exit("If you say so...")
 
         reader = None
 
@@ -345,21 +401,43 @@ class LinkGenerator():
 
         frames = []
         investigations = []
+        pool = mp.Pool(processes=NUM_CPUS)
+        jobs = []
 
-        for df_source in reader:
+        for index, df_source in enumerate(reader):
             df_source.fillna('', inplace=True)
             # The magic happens here...
-            df, to_investigate = cls._process_frame(config, session, df_source,
-                                                    partner)
-            if SAVE_OUT_FILE:
-                frames.append(df)
+            job = utils.apply_async(pool,
+                                    cls._process_frame,
+                                    (config, engine, df_source, partner))
+            jobs.append(job)
+
+        job_count = len(jobs)
+        cls.log.info("Total multiproc jobs: {}".format(job_count))
+
+        # collect the results
+        for index, job in enumerate(jobs):
+            try:
+                df_temp, to_investigate = job.get()
+                frames.append(df_temp)
                 investigations.extend(to_investigate)
 
+                if index % 100 == 0:
+                    cls.log.info("Appended result {} (out of {})"
+                                    .format(index, job_count))
+            except Exception as exc:
+                cls.log.error("Job [{}] error: {}".format(index, exc))
+                mp.get_log().error(traceback.format_exc())
+
+        pool.close()
+        pool.join()
+
         if SAVE_OUT_FILE:
+            cls.log.info("Got {} frames. Concatenating...".format(job_count))
             df = pd.concat(frames, ignore_index=True)
+
             out_file = os.path.join(outputdir, config['OUT_FILE'])
-            out_file_investigate = os.path.join(outputdir,
-                                                config['OUT_FILE_INVESTIGATE'])
+            out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
             utils.frame_to_file(df, out_file,
                                 delimiter=config['OUT_DELIMITER'])
             cls.log.info("Wrote output file: {} ({} data rows, {})"
@@ -367,8 +445,11 @@ class LinkGenerator():
                              out_file, len(df), utils.get_file_size(out_file)))
 
             with open(out_file_investigate, 'w') as invf:
+
                 for line in investigations:
                     invf.write("{}\n".format(line))
+
             cls.log.info("Wrote hashes that need investigation to {}"
                          .format(out_file_investigate))
+
         return True

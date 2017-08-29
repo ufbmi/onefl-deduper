@@ -46,7 +46,7 @@ class TestLinkGenerator(BaseTestCase):
         except Exception:
             pass
         result = LinkGenerator.generate(config, inputdir, outputdir,
-                                        partner='UFH')
+                                        partner='UFH', ask=False)
         self.assertTrue(result)
 
         # Check if the reference file exists
@@ -82,7 +82,7 @@ class TestLinkGenerator(BaseTestCase):
             # when we run the second time there are rows in the database
             # so we should get no new UUIDs...
             result = LinkGenerator.generate(config, inputdir, outputdir,
-                                            partner='FLM')
+                                            partner='FLM', ask=False)
 
             print("Run the second time to check that the existing links are"
                   " taken in consideration...")
