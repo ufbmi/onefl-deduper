@@ -59,7 +59,7 @@ CREATE TABLE dbo.linkage (
     rule_id int NOT NULL,
     linkage_patid varchar(64) NOT NULL,
     linkage_flag int NOT NULL,
-    linkage_uuid varchar(32) NOT NULL,
+    linkage_uuid varchar(32) NOT NULL COLLATE SQL_Latin1_General_CP1_CS_AS,
     linkage_hash binary(32) NULL,
     linkage_added_at datetime NOT NULL,
     constraint fk_linkage_partner_code foreign key (partner_code) references partner (partner_code),

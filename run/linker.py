@@ -69,11 +69,13 @@ def main():
     config = Config(root_path=ROOT_PATH, defaults={})
     config.from_pyfile(args.config)
     start = time.monotonic()
-    success = LinkGenerator.generate(config,
-                                     args.inputdir,
-                                     args.outputdir,
-                                     args.partner,
-                                     args.ask)
+    success = LinkGenerator.generate(config=config,
+                                     inputdir=args.inputdir,
+                                     outputdir=args.outputdir,
+                                     partner=args.partner,
+                                     ask=args.ask,
+                                     create_tables=False
+                                     )
     success = True
     end = time.monotonic()
     elapsed = (end - start)

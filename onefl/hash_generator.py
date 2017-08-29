@@ -215,7 +215,7 @@ class HashGenerator():
                                  .format(index, job_count))
             except Exception as exc:
                 cls.log.error("Job [{}] error: {}".format(index, exc))
-                mp.get_log().error(traceback.format_exc())
+                cls.log.error(traceback.format_exc())
 
         pool.close()
         pool.join()
