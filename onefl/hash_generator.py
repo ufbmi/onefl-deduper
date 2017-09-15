@@ -31,7 +31,7 @@ class HashGenerator():
         cls.log = logger
 
     @staticmethod
-    def _process_row_series(row, rule, pattern, required_attr, config, log):
+    def _process_row_series(row, rule, pattern, required_attr, config):
         """
         Compute the sha256 string for one rule.
 
@@ -53,18 +53,17 @@ class HashGenerator():
         )
 
         if not patient.has_all_data(required_attr):
-            log.debug("Skip hashing patient [{}] due to missing data"
-                      "for rule [{}]".format(patient.patid, rule))
+            # print("Skip hashing patient [{}] due to missing data for rule [{}]".format(patient.patid, rule))  # noqa
             return ''
 
         raw = pattern.format(patient) + config['SALT']
         sha_string = utils.apply_sha256(raw)
-        # log.debug("For patient [{}] (rule {}): {}, hash_string= {}".format(patient.patid, rule, raw, sha_string))  # noqa
+        # print("For patient [{}] (rule {}): {}, hash_string= {}".format(patient.patid, rule, raw, sha_string))  # noqa
 
         return sha_string
 
     @staticmethod
-    def _process_frame(df_source, config, log):
+    def _process_frame(df_source, config):
         """
         Create a result frame
 
@@ -84,7 +83,6 @@ class HashGenerator():
         df['PATID'] = df_source['patid']
 
         for i, rule in enumerate(rulz):
-            # log.debug("Applying rule {}: {}".format(i, rule))
             rule_data = rulz.get(rule)
             pattern = rule_data['pattern']
             required_attr = rule_data['required_attr']
@@ -93,8 +91,8 @@ class HashGenerator():
                 lambda x: HashGenerator._process_row_series(
                     x, rule, pattern,
                     required_attr,
-                    config, log), axis=1)
-        log.debug("Processed frame: \n{}".format(df))
+                    config), axis=1)
+        # print("Processed frame: \n{}".format(df))
         return df
 
     @classmethod
@@ -207,7 +205,7 @@ class HashGenerator():
 
             job = utils.apply_async(pool,
                                     HashGenerator._process_frame,
-                                    (df_source, config, cls.log))
+                                    (df_source, config))
             jobs.append(job)
 
         job_count = len(jobs)

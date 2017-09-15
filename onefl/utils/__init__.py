@@ -168,7 +168,7 @@ def humanize_bytes(bytes, precision=1):
 def frame_from_file(file_name,
                     delimiter,
                     dtype=object,
-                    quoting=QUOTE_NONE,
+                    quoting=QUOTE_ALL,
                     engine=None,
                     converters=None,
                     usecols=None,
