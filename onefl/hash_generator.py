@@ -30,10 +30,13 @@ class HashGenerator():
     def configure_logger(cls, logger):
         cls.log = logger
 
-    @classmethod
-    def _process_row_series(cls, ser, rule, pattern, required_attr, config):
+    @staticmethod
+    def _process_row_series(row, rule, pattern, required_attr, config):
         """
-        Compute the sha string for one rule.
+        Compute the sha256 string for one rule.
+
+        .. seealso::
+            :`_process_frame`
 
         :param config: dictionary with run-time parameters
         :rtype: string
@@ -41,30 +44,32 @@ class HashGenerator():
         """
 
         patient = NormalizedPatient(
-            patid=ser['patid'],
-            pat_first_name=ser['first'],
-            pat_last_name=ser['last'],
-            pat_birth_date=ser['dob'],
-            pat_sex=ser['sex'],
-            pat_race=ser['race']
+            patid=row['patid'],
+            pat_first_name=row['first'],
+            pat_last_name=row['last'],
+            pat_birth_date=row['dob'],
+            pat_sex=row['sex'],
+            pat_race=row['race']
         )
-        # cls.log.info("Patient: {}".format(patient))
 
         if not patient.has_all_data(required_attr):
-            cls.log.debug("Skip hashing patient [{}] due to missing data"
-                          "for rule [{}]".format(patient.patid, rule))
+            # print("Skip hashing patient [{}] due to missing data for rule [{}]".format(patient.patid, rule))  # noqa
             return ''
 
         raw = pattern.format(patient) + config['SALT']
         sha_string = utils.apply_sha256(raw)
-        cls.log.debug("For patient [{}] (rule {}): {}, hash_string= {}".format(patient.patid, rule, raw, sha_string))  # noqa
+        # print("For patient [{}] (rule {}): {}, hash_string= {}".format(patient.patid, rule, raw, sha_string))  # noqa
 
         return sha_string
 
-    @classmethod
-    def _process_frame(cls, df_source, config):
+    @staticmethod
+    def _process_frame(df_source, config):
         """
         Create a result frame
+
+        .. seealso::
+            :`_process_row_series`
+            :`generate`
 
         Reminder:
             - apply() works on a row / column basis of a DataFrame
@@ -78,16 +83,16 @@ class HashGenerator():
         df['PATID'] = df_source['patid']
 
         for i, rule in enumerate(rulz):
-            cls.log.debug("Applying rule {}: {}".format(i, rule))
             rule_data = rulz.get(rule)
             pattern = rule_data['pattern']
             required_attr = rule_data['required_attr']
 
             df[rule] = df_source.apply(
-                lambda x: cls._process_row_series(x, rule, pattern,
-                                                  required_attr,
-                                                  config), axis=1)
-        cls.log.debug("Processed frame: \n{}".format(df))
+                lambda x: HashGenerator._process_row_series(
+                    x, rule, pattern,
+                    required_attr,
+                    config), axis=1)
+        # print("Processed frame: \n{}".format(df))
         return df
 
     @classmethod
@@ -199,7 +204,7 @@ class HashGenerator():
                                 "`sex` column. Please review the specs.")
 
             job = utils.apply_async(pool,
-                                    cls._process_frame,
+                                    HashGenerator._process_frame,
                                     (df_source, config))
             jobs.append(job)
 
