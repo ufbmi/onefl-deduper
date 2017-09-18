@@ -1,7 +1,16 @@
 # Change Log
 
 
-## [0.0.5] - unreleased yet
+## [0.0.6] - unreleased yet
+
+## [0.0.5] - 2017-09-18
+
+### Changed
+ * [HASHER]: remove dependency on `log` object (Andrei Sura)
+ * [DOCS]: updates
+
+### Added
+ * [SCRIPTS]: save helper used before running the linkage (Andrei Sura)
 
 
 ## [0.0.4] - 2017-08-29
