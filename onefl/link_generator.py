@@ -66,6 +66,9 @@ class LinkGenerator():
                              rules_cache, config, session,
                              partner_code):
         """
+        TODO: This function is not handling the case when we run the linkage
+        for the same patient twice.
+
         :return a tuple of OrderedDicts (linkage_entities, sha_to_investigate)
         """
         links = {}
@@ -89,6 +92,24 @@ class LinkGenerator():
         elif len(pat_hashes) == 1:
             # only one hash was received
             rule_code, ahash = pat_hashes.popitem()
+            """
+            TODO: there are multiple cases when the same hash is associated
+            with 2 or 3 different patients from the same partner --
+            which means that storing and checking only the first link object
+            in the LUT can result in linking of ambiguous hashes.
+
+            Helper query:
+                select
+                    linkage_hash, count(*) cc
+                from
+                    linkage
+                where
+                    linkage_flag = 2  -- FLAG_SKIP_MATCH
+                    and partner_code = 'xyz'
+                group by linkage_hash
+                having
+                    count(*) > 1
+            """
             existing_link = hash_uuid_lut.get(ahash)
             binary_hash = unhexlify(ahash.encode('utf-8'))
 
@@ -97,7 +118,7 @@ class LinkGenerator():
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
-                # If we find a hash from the same source
+                # If we find a link with the same hash from the same source
                 # we ignore it and mark it accordingly
                 if existing_link.needs_to_skip_match_for_partner(partner_code):
                     uuid = utils.get_uuid()
@@ -192,7 +213,7 @@ class LinkGenerator():
                 flag_2 = FLAG_HASH_NOT_FOUND
 
                 # TODO: verify the logic:
-                #   "two distinct patients with same hash from same partner are
+                #   "two distinct patids with same hash from same partner are
                 #   considered different persons"
                 if existing_link_1.needs_to_skip_match_for_partner(partner_code):  # noqa
                     uuid = utils.get_uuid()
