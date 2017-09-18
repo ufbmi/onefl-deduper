@@ -76,6 +76,10 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
         return utils.hexlify(self.linkage_hash)
 
     def needs_to_skip_match_for_partner(self, partner_code):
+        """
+        Note: This functions is used to insure that ambiguous hashes
+        are ignored, which results in a reduction of de-duplication rate.
+        """
         if (self.partner_code == partner_code or
                 self.linkage_flag == FLAG_SKIP_MATCH):
             return True
