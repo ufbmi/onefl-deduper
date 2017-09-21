@@ -121,7 +121,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
         lut = {}
 
         for ahash in hashes:
-            # instantiate every bucket even if the has has no records in the db
+            # instantiate every bucket even if the hash has no record in the db
             lut[ahash] = []
 
         for link in links:
