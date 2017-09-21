@@ -58,7 +58,6 @@ class LinkGenerator():
                       .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
-
         return hash_uuid_lut
 
     @classmethod
@@ -93,39 +92,46 @@ class LinkGenerator():
             # only one hash was received
             rule_code, ahash = pat_hashes.popitem()
             """
-            TODO: there are multiple cases when the same hash is associated
+            Note: there are multiple cases when the same hash is associated
             with 2 or 3 different patients from the same partner --
-            which means that storing and checking only the first link object
-            in the LUT can result in linking of ambiguous hashes.
+            which means that we have to checking every link object
+            in the LUT to avoid linking different patids even if they have
+            same hash value.
 
-            Helper query:
-                select
+            Example query:
+                SELECT
                     linkage_hash, count(*) cc
-                from
+                FROM
                     linkage
-                where
+                WHERE
                     linkage_flag = 2  -- FLAG_SKIP_MATCH
                     and partner_code = 'xyz'
-                group by linkage_hash
-                having
-                    count(*) > 1
+                GROUP BY
+                    linkage_hash
+                HAVING
+                    COUNT(*) > 1
             """
-            existing_link = hash_uuid_lut.get(ahash)
+            # list type
+            existing_links = hash_uuid_lut.get(ahash)
             binary_hash = unhexlify(ahash.encode('utf-8'))
 
-            if existing_link is None:
-                # create new UUID
+            if len(existing_links) == 0:
+                # the hash search did not find any records => create new UUID
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
                 # If we find a link with the same hash from the same source
                 # we ignore it and mark it accordingly
-                if existing_link.needs_to_skip_match_for_partner(partner_code):
+                if LinkageEntity.needs_to_skip_match_for_partner(
+                        existing_links,
+                        partner_code,
+                        patid):
                     uuid = utils.get_uuid()
                     flag = FLAG_SKIP_MATCH
                 else:
-                    # reuse the existing UUID
-                    uuid = existing_link.linkage_uuid
+                    # reuse the first existing UUID
+                    # TODO: check if the source of the link matters here?
+                    uuid = existing_links[0].linkage_uuid
                     flag = FLAG_HASH_FOUND
 
             new_link = LinkageEntity.create(
@@ -154,6 +160,10 @@ class LinkGenerator():
                             rules_cache, config, session,
                             partner_code):
         """
+        :param patid: string representing the patient processed
+        :param hash_uuid_lut: a dictionary of links found in the database
+            for every hash associated with the patid we are processing
+
         Note: a `1` in the comments below indicates that a hash is already in
             the database!
 
@@ -174,14 +184,17 @@ class LinkGenerator():
         # the logic work for "n" rules
         rule_code_1, ahash_1 = pat_hashes.popitem()
         rule_code_2, ahash_2 = pat_hashes.popitem()
-        existing_link_1 = hash_uuid_lut.get(ahash_1)
-        existing_link_2 = hash_uuid_lut.get(ahash_2)
 
-        both_not_found = existing_link_1 is None and existing_link_2 is None
-        only_one_found = ((existing_link_1 is None and
-                           existing_link_2 is not None) or
-                          (existing_link_1 is not None and
-                           existing_link_2 is None))
+        # Add fixes here...
+        existing_links_1 = hash_uuid_lut.get(ahash_1)
+        existing_links_2 = hash_uuid_lut.get(ahash_2)
+
+        both_not_found = (len(existing_links_1) == 0
+                          and len(existing_links_2) == 0)
+        only_one_found = ((len(existing_links_1) == 0 and
+                           len(existing_links_2) > 0) or
+                          (len(existing_links_1) > 0 and
+                           len(existing_links_2) == 0))
 
         if both_not_found:
             # create two links with a `fresh` UUID
@@ -209,26 +222,30 @@ class LinkGenerator():
 
         elif only_one_found:
             # reuse the existing UUID
-            if existing_link_1 is not None:
+            if len(existing_links_1) > 0:
                 flag_2 = FLAG_HASH_NOT_FOUND
 
                 # TODO: verify the logic:
                 #   "two distinct patids with same hash from same partner are
                 #   considered different persons"
-                if existing_link_1.needs_to_skip_match_for_partner(partner_code):  # noqa
+                if LinkageEntity.needs_to_skip_match_for_partner(
+                        existing_links_1, partner_code, patid):
                     uuid = utils.get_uuid()
                     flag_1 = FLAG_SKIP_MATCH
                 else:
-                    uuid = existing_link_1.linkage_uuid
+                    uuid = existing_links_1[0].linkage_uuid
                     flag_1 = FLAG_HASH_FOUND
             else:
                 flag_1 = FLAG_HASH_NOT_FOUND
 
-                if existing_link_2.needs_to_skip_match_for_partner(partner_code):  # noqa
+                if LinkageEntity.needs_to_skip_match_for_partner(
+                        existing_links_2,
+                        partner_code,
+                        patid):
                     uuid = utils.get_uuid()
                     flag_2 = FLAG_SKIP_MATCH
                 else:
-                    uuid = existing_link_2.linkage_uuid
+                    uuid = existing_links_2[0].linkage_uuid
                     flag_2 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
@@ -250,11 +267,14 @@ class LinkGenerator():
                 linkage_added_at=added_date)
         else:
             # both are found
-            if existing_link_1.needs_to_skip_match_for_partner(partner_code):
+            if LinkageEntity.needs_to_skip_match_for_partner(
+                    existing_links_1,
+                    partner_code,
+                    patid):
                 uuid = utils.get_uuid()
                 flag = FLAG_SKIP_MATCH
             else:
-                uuid = existing_link_1.linkage_uuid
+                uuid = existing_links_1[0].linkage_uuid
                 flag = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
@@ -266,10 +286,12 @@ class LinkGenerator():
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
-            # UUID's match - insert row for the second hash too
-            if (existing_link_1.linkage_uuid ==
-                    existing_link_2.linkage_uuid):
-                # consensus hence insert row for hash 2 too
+            distinct_uuids = LinkageEntity.get_unique_uuids(
+                existing_links_1,
+                existing_links_2)
+
+            if 1 == len(distinct_uuids):
+                # UUID's match - insert row for the second hash too
                 new_link_2 = LinkageEntity.create(
                     partner_code=partner_code,
                     rule_id=rules_cache.get(rule_code_2),
@@ -281,15 +303,15 @@ class LinkGenerator():
             else:
                 # the UUID's do not match - we need to investigate
                 to_investigate = {
-                    ahash_2: [existing_link_1.linkage_uuid,
-                              existing_link_2.linkage_uuid]
+                    ahash_2: [existing_links_1,
+                              existing_links_2]
                 }
                 cls.log.warning("Hashes of the patid [{}] are linked"
                                 " to two distinct UUIDs: {}, {}."
                                 " We linked only the first hash!"
                                 .format(patid,
-                                        existing_link_1.linkage_uuid,
-                                        existing_link_2.linkage_uuid))
+                                        existing_links_1,
+                                        existing_links_2))
                 return {ahash_1: new_link_1}, to_investigate
 
         links[ahash_1] = new_link_1
@@ -315,11 +337,11 @@ class LinkGenerator():
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
         investigations = []
-        hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
-        mapped_hashes = {ahash: link.linkage_uuid
-                         for ahash, link in hash_uuid_lut.items()
-                         if link is not None}
         rules_cache = RuleEntity.get_rules_cache(session)
+
+        hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
+        mapped_hashes = {ahash: links
+                         for ahash, links in hash_uuid_lut.items()}
         cls.log.debug("Found {} linked hashes in db: {}"
                       .format(len(mapped_hashes), mapped_hashes))
 
@@ -449,7 +471,7 @@ class LinkGenerator():
                                  .format(index, job_count))
             except Exception as exc:
                 cls.log.error("Job [{}] error: {}".format(index, exc))
-                mp.get_log().error(traceback.format_exc())
+                cls.log.error(traceback.format_exc())
 
         pool.close()
         pool.join()
