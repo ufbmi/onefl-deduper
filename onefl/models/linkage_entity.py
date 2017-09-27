@@ -114,6 +114,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
         # binary representations of the hashes
         bin_hashes = [binascii.unhexlify(ahash.encode('utf-8'))
                       for ahash in hashes]
+        # print("==> Query hashes: {}".format(bin_hashes))
         links = session.query(LinkageEntity).filter(
             LinkageEntity.linkage_hash.in_(bin_hashes)).all()
 
@@ -126,7 +127,7 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
 
         for link in links:
             # collect every link in the corresponding bucket
-            lut[ahash].append(link)
+            lut[link.friendly_hash()].append(link)
 
         return lut
 

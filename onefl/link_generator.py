@@ -185,7 +185,7 @@ class LinkGenerator():
         rule_code_1, ahash_1 = pat_hashes.popitem()
         rule_code_2, ahash_2 = pat_hashes.popitem()
 
-        # Add fixes here...
+        # The dictionary contains lists of links
         existing_links_1 = hash_uuid_lut.get(ahash_1)
         existing_links_2 = hash_uuid_lut.get(ahash_2)
 
@@ -303,15 +303,15 @@ class LinkGenerator():
             else:
                 # the UUID's do not match - we need to investigate
                 to_investigate = {
-                    ahash_2: [existing_links_1,
-                              existing_links_2]
+                    ahash_2: [
+                        [lnk.linkage_uuid for lnk in existing_links_1] +
+                        [lnk.linkage_uuid for lnk in existing_links_2]
+                    ]
                 }
                 cls.log.warning("Hashes of the patid [{}] are linked"
-                                " to two distinct UUIDs: {}, {}."
+                                " to two distinct UUIDs: {}."
                                 " We linked only the first hash!"
-                                .format(patid,
-                                        existing_links_1,
-                                        existing_links_2))
+                                .format(patid, to_investigate))
                 return {ahash_1: new_link_1}, to_investigate
 
         links[ahash_1] = new_link_1
@@ -356,13 +356,12 @@ class LinkGenerator():
             if len(pat_hashes) < 1:
                 patients_with_no_hashes.append(patid)
 
-            cls.log.debug("Parsing row for patient {} with {} hashes"
-                          .format(patid, len(pat_hashes)))
+            # cls.log.debug("Parsing row for patient {} with {} hashes".format(patid, len(pat_hashes)))  # noqa
             links, to_investigate = cls._process_patient_row(
                 patid, pat_hashes.copy(), hash_uuid_lut,
                 rules_cache, config, session,
                 partner_code)
-            cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
+            # cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
 
             if len(to_investigate) > 0:
                 investigations.append(to_investigate)
