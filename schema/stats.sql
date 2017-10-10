@@ -58,8 +58,9 @@ select
 
 
 
--- Query used to find incorrectly linked patients within same source
-select linkage_uuid, count(*) from linkage where partner_code = 'FLM' group by linkage_uuid having count(*) > 2
+-- Queries used to find incorrectly linked patients within same source
+select linkage_uuid, count(*) rows_linkage, count(distinct linkage_patid) distinct_patients from linkage where partner_code = 'FLM' group by linkage_uuid having count(*) > 2
+select linkage_uuid, count(*) rows_linkage, count(distinct linkage_patid) distinct_patients from linkage where partner_code = 'UFH' group by linkage_uuid having count(*) > 2
 
 
 -- Query used to examine all the rows contributing to de-duplication rate
