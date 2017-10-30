@@ -171,3 +171,10 @@ def clean(ctx):
 def clean_log(ctx):
     """ Remove log file """
     ctx.run('rm -f logs/deduper.log')
+
+@task
+def package_hasher(ctx):
+    # ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico --version-file=resources/version.txt run/hasher.py')
+    ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico run/hasher.py')
+    ctx.run('echo "Test the exe: dist/hasher.exe -v"')
+    ctx.run('dist\hasher.exe -v')
