@@ -9,6 +9,7 @@ import collections  # noqa
 import multiprocessing as mp
 import os
 import pandas as pd
+import numpy as np
 import pprint  # noqa
 import sys
 import traceback
@@ -58,6 +59,10 @@ class LinkGenerator():
                       .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
+
+        from pprint import pprint as pp
+        pp("From hashes: {} got:".format(list(hashes)))
+        pp(hash_uuid_lut)
         return hash_uuid_lut
 
     @classmethod
@@ -391,6 +396,42 @@ class LinkGenerator():
                             ' the DB_TYPE parameter.')
 
     @classmethod
+    def _prepare_frame(cls, config, inputdir, outputdir):
+        """
+        Load the frame and detect re-used hashes - the corresponding rows
+        are marked with SKIP=True which is later used to avoid database lookups
+        """
+        EXPECTED_COLS = config['EXPECTED_COLS']
+        in_file = os.path.join(inputdir, config['IN_FILE'])
+        df = None
+
+        try:
+            df = pd.read_csv(in_file,
+                             sep=config['IN_DELIMITER'],
+                             dtype=object,
+                             skipinitialspace=True,
+                             skip_blank_lines=True,
+                             usecols=list(EXPECTED_COLS),
+                             )
+            df.fillna('', inplace=True)
+            rules = config['ENABLED_RULES']
+
+            if len(rules) == 2:
+                df['H1_REPEAT_COUNT'] = df.groupby(rules.get('1')
+                                                   )['PATID'].transform(len)
+                df['H2_REPEAT_COUNT'] = df.groupby(rules.get('2')
+                                                   )['PATID'].transform(len)
+            else:
+                raise Exception("Config error for ENABLED_RULES. Expected two rules!")  # noqa
+        except ValueError as exc:
+            cls.log.info("Please check if the actual column names"
+                         " in [{}] match the expected column names"
+                         " file: {}.".format(in_file, sorted(EXPECTED_COLS)))
+            cls.log.error("Error: {}".format(exc))
+
+        return df
+
+    @classmethod
     def generate(cls, config, inputdir, outputdir, partner,
                  ask=True, create_tables=True):
         """
@@ -403,13 +444,8 @@ class LinkGenerator():
 
         """
         cls._validate_config(config)
-        # engine = db_utils.get_db_engine(config)
-        EXPECTED_COLS = config['EXPECTED_COLS']
-        SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
-
-        cls.log.info("Using [{}] as source folder".format(inputdir))
-        cls.log.info("Using [{}] as source file".format(in_file))
+        cls.log.info("Using {} as input file ({})".format(in_file, utils.get_file_size(in_file)))  # noqa
         cls.log.info("Connection HOST:DB - {}/{}"
                      .format(config['DB_HOST'], config['DB_NAME']))
 
@@ -421,34 +457,18 @@ class LinkGenerator():
             if not confirmed:
                 sys.exit("If you say so...")
 
-        reader = None
-
-        try:
-            reader = pd.read_csv(in_file,
-                                 sep=config['IN_DELIMITER'],
-                                 dtype=object,
-                                 skipinitialspace=True,
-                                 skip_blank_lines=True,
-                                 usecols=list(EXPECTED_COLS),
-                                 chunksize=config['LINES_PER_CHUNK'],
-                                 iterator=True)
-            cls.log.info("Reading data from file: {} ({})"
-                         .format(in_file, utils.get_file_size(in_file)))
-
-        except ValueError as exc:
-            cls.log.info("Please check if the actual column names"
-                         " in [{}] match the expected column names"
-                         " file: {}.".format(in_file,
-                                             sorted(EXPECTED_COLS)))
-            cls.log.error("Error: {}".format(exc))
+        df = cls._prepare_frame(config, inputdir, outputdir)
 
         frames = []
         investigations = []
         pool = mp.Pool(processes=NUM_CPUS)
         jobs = []
 
-        for index, df_source in enumerate(reader):
-            df_source.fillna('', inplace=True)
+        chunksize = config['LINES_PER_CHUNK']
+
+        # for index, df_source in enumerate(reader):
+        for index, group in df.groupby(np.arange(len(df)) // chunksize):
+            df_source = pd.DataFrame(group)
             # The magic happens here...
             job = utils.apply_async(pool,
                                     cls._process_frame,
@@ -475,24 +495,28 @@ class LinkGenerator():
         pool.close()
         pool.join()
 
-        if SAVE_OUT_FILE:
-            cls.log.info("Got {} frames. Concatenating...".format(job_count))
-            df = pd.concat(frames, ignore_index=True)
-
-            out_file = os.path.join(outputdir, config['OUT_FILE'])
-            out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
-            utils.frame_to_file(df, out_file,
-                                delimiter=config['OUT_DELIMITER'])
-            cls.log.info("Wrote output file: {} ({} data rows, {})"
-                         .format(
-                             out_file, len(df), utils.get_file_size(out_file)))
-
-            with open(out_file_investigate, 'w') as invf:
-
-                for line in investigations:
-                    invf.write("{}\n".format(line))
-
-            cls.log.info("Wrote hashes that need investigation to {}"
-                         .format(out_file_investigate))
+        if config['SAVE_OUT_FILE']:
+            cls.save_output_file(config, outputdir, job_count, frames,
+                                 investigations)
 
         return True
+
+    @classmethod
+    def save_output_file(cls, config, outputdir, job_count, frames,
+                         investigations):
+
+        cls.log.info("Got {} frames. Concatenating...".format(job_count))
+        df = pd.concat(frames, ignore_index=True)
+
+        out_file = os.path.join(outputdir, config['OUT_FILE'])
+        out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
+        utils.frame_to_file(df, out_file, delimiter=config['OUT_DELIMITER'])
+        cls.log.info("Wrote output file: {} ({} data rows, {})"
+                     .format(out_file, len(df), utils.get_file_size(out_file)))
+
+        with open(out_file_investigate, 'w') as invf:
+            for line in investigations:
+                invf.write("{}\n".format(line))
+
+        cls.log.info("Wrote hashes that need investigation to {}"
+                     .format(out_file_investigate))
