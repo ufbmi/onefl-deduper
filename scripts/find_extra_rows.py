@@ -35,8 +35,34 @@ import pandas as pd
 import argparse
 
 
-def main():
+def extra(args):
+    file_large = args.file_a
+    file_small = args.file_b
+    join_column = args.join_column.strip()
+    separator = args.separator.strip(' ')
 
+    print("Reading file: {}".format(file_large))
+    df_a = pd.read_csv(file_large, dtype=object, sep=separator)
+    # df_a.fillna('', inplace=True)
+    print("Found {} rows".format(len(df_a)))
+    print(df_a.head())
+
+    print("Reading file: {}".format(file_small))
+    df_b = pd.read_csv(file_small, dtype=object, sep=separator)
+    print("Found {} row(s)".format(len(df_b)))
+
+    print("Checking common lines in {} and {}".format(file_large, file_small))
+    df_common = pd.merge(df_a, df_b, on=join_column,
+                         how='inner', sort=True)
+    print("Found {} common row(s).".format(len(df_common)))
+
+    df_extra = df_a[~df_a[join_column].isin(df_common[join_column])]
+    print("Found {} extra row(s) in: {}".format(len(df_extra), file_large))
+
+    return (df_common, df_extra)
+
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--file_a', required=True,
                         help='the large file'
@@ -50,32 +76,10 @@ def main():
     parser.add_argument('-s', '--separator', required=False, default='\t',
                         help='record separator'
                         )
-
     args = parser.parse_args()
-    file_large = args.file_a
-    file_small = args.file_b
-    join_column = args.join_column.strip()
-    separator = args.separator.strip(' ')
+    (df_common, df_extra) = extra(args)
+
     output_file = 'extra_{}'.format(args.file_a)
-
-    print("Reading file: {}".format(file_large))
-    df_a = pd.read_csv(file_large, dtype=object, sep=separator)
-    # df_a.fillna('', inplace=True)
-    print("Found {} rows".format(len(df_a)))
-    print(df_a.head())
-
-    print("Reading file: {}".format(file_small))
-    df_b = pd.read_csv(file_small, dtype=object, sep=separator)
-    print("Found {} rows".format(len(df_b)))
-
-    print("Checking common lines in {} and {}".format(file_large, file_small))
-    df_common = pd.merge(df_a, df_b, on=join_column,
-                         how='inner', sort=True)
-    print("Found {} common rows.".format(len(df_common)))
-
-    df_extra = df_a[~df_a[join_column].isin(df_common[join_column])]
-    print("Found {} extra rows in file: {}".format(len(df_extra), file_large))
-
     df_extra.to_csv(output_file, index=False, sep='\t')
     print("Wrote the {} extra rows to: {}".format(len(df_extra), output_file))
     print(df_extra.head().to_csv(sep='\t', index=False))
