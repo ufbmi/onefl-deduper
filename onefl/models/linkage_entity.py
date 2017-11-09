@@ -30,6 +30,7 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
 FLAG_HASH_FOUND = 1  # 'hash found'
 FLAG_SKIP_MATCH = 2  # flag rows which should not participate in matching
+FLAG_SKIP_REPEATED = 3  # flag rows from same partner having same hash
 
 
 __all__ = ['LinkageEntity']
@@ -84,10 +85,12 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
         are ignored, which results in a reduction of de-duplication rate.
         """
         for link in links:
+            # print("Checking {} - {}".format(link.partner_code, link.linkage_patid))  # noqa
             if ((link.partner_code == processed_partner_code
                     and link.linkage_patid != processed_patid)
                     or link.linkage_flag == FLAG_SKIP_MATCH):
                 return True
+
         return False
 
     @staticmethod

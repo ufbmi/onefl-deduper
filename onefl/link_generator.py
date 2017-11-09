@@ -20,7 +20,9 @@ from datetime import datetime  # noqa
 from onefl import utils
 from onefl.utils import db as db_utils
 from onefl.exc import ConfigErr
-from onefl.models.linkage_entity import FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND, FLAG_SKIP_MATCH  # noqa
+from onefl.models.linkage_entity import (
+    FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND,
+    FLAG_SKIP_MATCH, FLAG_SKIP_REPEATED)
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
@@ -59,16 +61,46 @@ class LinkGenerator():
                       .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
-
-        from pprint import pprint as pp
-        pp("From hashes: {} got:".format(list(hashes)))
-        pp(hash_uuid_lut)
+        # from pprint import pprint as pp
+        # pp("From hashes: {} got:".format(list(hashes)))
+        # pp(hash_uuid_lut)
         return hash_uuid_lut
+
+    @classmethod
+    def _process_patient_row_no_lookup(cls, patid, pat_hashes,
+                                       rules_cache, config, session,
+                                       partner_code):
+        links = {}
+        to_investigate = {}
+
+        if len(pat_hashes) == 1:
+            # only one hash was received
+            rule_code, ahash = pat_hashes.popitem()
+            binary_hash = unhexlify(ahash.encode('utf-8'))
+            uuid = utils.get_uuid()
+
+            new_link = LinkageEntity.create(
+                partner_code=partner_code,
+                rule_id=rules_cache.get(rule_code),  # we need the rule_id here
+                linkage_patid=patid,
+                linkage_flag=FLAG_SKIP_MATCH,  # set to 2
+                linkage_uuid=uuid,
+                linkage_hash=binary_hash,
+                linkage_added_at=datetime.now())
+            if rule_code == RULE_CODE_F_L_D_R:
+                links = {ahash: new_link}
+            else:
+                links = {'': None, ahash: new_link}
+        else:
+            # insert two rows
+            pass
+
+        return links, to_investigate
 
     @classmethod
     def _process_patient_row(cls, patid, pat_hashes, hash_uuid_lut,
                              rules_cache, config, session,
-                             partner_code):
+                             partner_code, skip_db_lookup):
         """
         TODO: This function is not handling the case when we run the linkage
         for the same patient twice.
@@ -120,7 +152,11 @@ class LinkGenerator():
             existing_links = hash_uuid_lut.get(ahash)
             binary_hash = unhexlify(ahash.encode('utf-8'))
 
-            if len(existing_links) == 0:
+            if skip_db_lookup:
+                # we detected two or more rows with same hash
+                uuid = utils.get_uuid()
+                flag = FLAG_SKIP_REPEATED
+            elif len(existing_links) == 0:
                 # the hash search did not find any records => create new UUID
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
@@ -157,13 +193,13 @@ class LinkGenerator():
             links, to_investigate = cls._process_two_hashes(
                 patid, pat_hashes, hash_uuid_lut,
                 rules_cache, config, session,
-                partner_code)
+                partner_code, skip_db_lookup)
         return links, to_investigate
 
     @classmethod
     def _process_two_hashes(cls, patid, pat_hashes, hash_uuid_lut,
                             rules_cache, config, session,
-                            partner_code):
+                            partner_code, skip_db_lookup):
         """
         :param patid: string representing the patient processed
         :param hash_uuid_lut: a dictionary of links found in the database
@@ -201,17 +237,16 @@ class LinkGenerator():
                           (len(existing_links_1) > 0 and
                            len(existing_links_2) == 0))
 
-        if both_not_found:
+        if both_not_found or skip_db_lookup:
             # create two links with a `fresh` UUID
             uuid = utils.get_uuid()
-            flag_1 = FLAG_HASH_NOT_FOUND
-            flag_2 = FLAG_HASH_NOT_FOUND
+            flag = FLAG_SKIP_REPEATED if skip_db_lookup else FLAG_HASH_NOT_FOUND  # noqa
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
-                linkage_flag=flag_1,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -220,7 +255,7 @@ class LinkGenerator():
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
-                linkage_flag=flag_2,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -230,10 +265,13 @@ class LinkGenerator():
             if len(existing_links_1) > 0:
                 flag_2 = FLAG_HASH_NOT_FOUND
 
-                # TODO: verify the logic:
-                #   "two distinct patids with same hash from same partner are
-                #   considered different persons"
-                if LinkageEntity.needs_to_skip_match_for_partner(
+                # Two distinct patids with same hash from same partner are
+                # considered different persons and get distinct UUIDs
+
+                if skip_db_lookup:
+                    uuid = utils.get_uuid()
+                    flag_1 = FLAG_SKIP_REPEATED
+                elif LinkageEntity.needs_to_skip_match_for_partner(
                         existing_links_1, partner_code, patid):
                     uuid = utils.get_uuid()
                     flag_1 = FLAG_SKIP_MATCH
@@ -243,6 +281,9 @@ class LinkGenerator():
             else:
                 flag_1 = FLAG_HASH_NOT_FOUND
 
+                if skip_db_lookup:
+                    uuid = utils.get_uuid()
+                    flag_2 = FLAG_SKIP_REPEATED
                 if LinkageEntity.needs_to_skip_match_for_partner(
                         existing_links_2,
                         partner_code,
@@ -365,7 +406,7 @@ class LinkGenerator():
             links, to_investigate = cls._process_patient_row(
                 patid, pat_hashes.copy(), hash_uuid_lut,
                 rules_cache, config, session,
-                partner_code)
+                partner_code, row['SKIP'])
             # cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
 
             if len(to_investigate) > 0:
@@ -421,6 +462,10 @@ class LinkGenerator():
                                                    )['PATID'].transform(len)
                 df['H2_REPEAT_COUNT'] = df.groupby(rules.get('2')
                                                    )['PATID'].transform(len)
+
+                df['SKIP'] = np.where(
+                    df.H1_REPEAT_COUNT > 1, True,
+                    np.where(df.H2_REPEAT_COUNT > 1, True, False))
             else:
                 raise Exception("Config error for ENABLED_RULES. Expected two rules!")  # noqa
         except ValueError as exc:
@@ -468,6 +513,7 @@ class LinkGenerator():
 
         # for index, df_source in enumerate(reader):
         for index, group in df.groupby(np.arange(len(df)) // chunksize):
+            # cls.log.error("Frame chunk [{}]".format(index))
             df_source = pd.DataFrame(group)
             # The magic happens here...
             job = utils.apply_async(pool,
