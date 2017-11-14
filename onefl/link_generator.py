@@ -61,41 +61,7 @@ class LinkGenerator():
                       .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
-        # from pprint import pprint as pp
-        # pp("From hashes: {} got:".format(list(hashes)))
-        # pp(hash_uuid_lut)
         return hash_uuid_lut
-
-    @classmethod
-    def _process_patient_row_no_lookup(cls, patid, pat_hashes,
-                                       rules_cache, config, session,
-                                       partner_code):
-        links = {}
-        to_investigate = {}
-
-        if len(pat_hashes) == 1:
-            # only one hash was received
-            rule_code, ahash = pat_hashes.popitem()
-            binary_hash = unhexlify(ahash.encode('utf-8'))
-            uuid = utils.get_uuid()
-
-            new_link = LinkageEntity.create(
-                partner_code=partner_code,
-                rule_id=rules_cache.get(rule_code),  # we need the rule_id here
-                linkage_patid=patid,
-                linkage_flag=FLAG_SKIP_MATCH,  # set to 2
-                linkage_uuid=uuid,
-                linkage_hash=binary_hash,
-                linkage_added_at=datetime.now())
-            if rule_code == RULE_CODE_F_L_D_R:
-                links = {ahash: new_link}
-            else:
-                links = {'': None, ahash: new_link}
-        else:
-            # insert two rows
-            pass
-
-        return links, to_investigate
 
     @classmethod
     def _process_patient_row(cls, patid, pat_hashes, hash_uuid_lut,
