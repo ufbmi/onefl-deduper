@@ -141,7 +141,8 @@ class HashGenerator():
         EXPECTED_COLS = config['EXPECTED_COLS']
         ENABLED_RULES = config.get('ENABLED_RULES')
 
-        cls.log.info("Using [{}] as source folder".format(inputdir))
+        in_file = os.path.join(inputdir, config['IN_FILE'])
+        cls.log.info("Using [{}] as source file".format(in_file))
         cls.log.info("Using [{}] as salt".format(config['SALT']))
         cls.log.info("Expecting input file to contain columns: {}"
                      .format(EXPECTED_COLS))
@@ -153,7 +154,6 @@ class HashGenerator():
             if not confirmed:
                 sys.exit("If you say so...")
 
-        in_file = os.path.join(inputdir, config['IN_FILE'])
         reader = None
 
         try:
@@ -196,12 +196,10 @@ class HashGenerator():
 
             if len(invalid_race) > 0:
                 cls.log.info("Please check race: {}".format(invalid_race))
-                raise Exception("The input file contains invalid value for "
-                                "`race` column. Please review the specs.")
+                raise Exception("The input file contains invalid value for `race` column. Please review the specs.")  # noqa
             if len(invalid_sex) > 0:
                 cls.log.warning("Please check sex: {}".format(invalid_sex))
-                raise Exception("The input file contains invalid value for "
-                                "`sex` column. Please review the specs.")
+                raise Exception("The input file contains invalid value for `sex` column. Please review the specs.")  # noqa
 
             job = utils.apply_async(pool,
                                     HashGenerator._process_frame,
