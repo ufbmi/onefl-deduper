@@ -72,12 +72,12 @@ def main():
 
     print("Reading UFH...")
     df_ufh = read_ufh(conn)
-    print("Writing to: {} ".format(OUT_UFH))
+    print("Writing [{}] lines to: {}".format(len(df_ufh), OUT_UFH ))
     df_ufh.to_csv(OUT_UFH, sep=OUT_SEP, index=False)
 
     print("Reading FLM...")
     df_flm = read_flm(conn)
-    print("Writing to: {} ".format(OUT_FLM))
+    print("Writing [{} lines to: {} ".format(len(df_flm), OUT_FLM))
     df_flm.to_csv(OUT_FLM, sep=OUT_SEP, index=False)
 
 

@@ -21,10 +21,10 @@ set @linked_patients_UFH_FLM=(select count(*) from (select linkage_uuid, count(d
 set @linked_percentage_UFH = (@linked_patients_UFH_FLM * 100.0)/@distinct_uuids_UFH
 
 print CONCAT('Distinct UFH PATIDs: ', CAST(@distinct_patids_UFH as varchar))
-print CONCAT('Distinct UFH UUIDs: ', CAST(@distinct_uuids_UFH as varchar(100)), '(must match the number of patients)')
+print CONCAT('Distinct UFH UUIDs: ', CAST(@distinct_uuids_UFH as varchar(100)), ' (must match the number of patients)')
 
 print CONCAT('Distinct FLM PATIDs: ', CAST(@distinct_patids_FLM as varchar))
-print CONCAT('Distinct FLM UUIDs: ', CAST(@distinct_uuids_FLM as varchar(100)), '(must match the number of patients)')
+print CONCAT('Distinct FLM UUIDs: ', CAST(@distinct_uuids_FLM as varchar(100)), ' (must match the number of patients)')
 
 print CONCAT('Linked UFH patients: ', CAST(@linked_patients_UFH_FLM as varchar(100)))
 print CONCAT('Percentage of linked UFH patients: ', CAST(@linked_percentage_UFH  as varchar(100)))
@@ -60,8 +60,8 @@ select
 
 
 -- Queries used to find incorrectly linked patients within same source
-select linkage_uuid, count(*) rows_linkage, count(distinct linkage_patid) distinct_patients from linkage where partner_code = 'FLM' group by linkage_uuid having count(*) > 2
-select linkage_uuid, count(*) rows_linkage, count(distinct linkage_patid) distinct_patients from linkage where partner_code = 'UFH' group by linkage_uuid having count(*) > 2
+select linkage_uuid, count(*) rows_linkage, count(distinct linkage_patid) distinct_patients from linkage where partner_code = 'FLM' group by linkage_uuid having count(distinct linkage_patid) > 2
+select linkage_uuid, count(*) rows_linkage, count(distinct linkage_patid) distinct_patients from linkage where partner_code = 'UFH' group by linkage_uuid having count(distinct linkage_patid) > 2
 
 
 -- Query used to examine all the rows contributing to de-duplication rate
