@@ -462,8 +462,8 @@ class LinkGenerator():
 
         if ask:
             confirmed = utils.ask_yes_no(
-                "Continue link procedure to create files in the [{}] folder?"
-                .format(outputdir))
+                "Run [{}] linkage to create files in the [{}] folder?"
+                .format(partner, outputdir))
 
             if not confirmed:
                 sys.exit("If you say so...")

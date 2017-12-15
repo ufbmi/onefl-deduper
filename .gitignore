@@ -103,3 +103,4 @@ phi*.csv
 # stores raw data files
 linkage_related/
 scripts/extra_a.csv
+scripts/config.py

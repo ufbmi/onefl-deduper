@@ -10,20 +10,21 @@ declare @distinct_uuids_FLM int
 declare @linked_patients_UFH_FLM int
 declare @linked_percentage_UFH float
 
-set @distinct_patids_UFH=(select count(distinct linkage_patid) from linkage where partner_code = 'UFH')
-set @distinct_patids_FLM=(select count(distinct linkage_patid) from linkage where partner_code = 'FLM')
 
+set @distinct_patids_UFH=(select count(distinct linkage_patid) from linkage where partner_code = 'UFH')
 set @distinct_uuids_UFH=(select count(distinct linkage_uuid) from linkage where partner_code = 'UFH')
+
+set @distinct_patids_FLM=(select count(distinct linkage_patid) from linkage where partner_code = 'FLM')
 set @distinct_uuids_FLM=(select count(distinct linkage_uuid) from linkage where partner_code = 'FLM')
 
 set @linked_patients_UFH_FLM=(select count(*) from (select linkage_uuid, count(distinct partner_code) as cc from linkage where partner_code in ('UFH', 'FLM') group by linkage_uuid having count(distinct partner_code) > 1) as c)
 set @linked_percentage_UFH = (@linked_patients_UFH_FLM * 100.0)/@distinct_uuids_UFH
 
-print CONCAT('Distinct UFH patients: ', CAST(@distinct_patids_UFH as varchar))
-print CONCAT('Distinct FLM patients: ', CAST(@distinct_patids_FLM as varchar))
+print CONCAT('Distinct UFH PATIDs: ', CAST(@distinct_patids_UFH as varchar))
+print CONCAT('Distinct UFH UUIDs: ', CAST(@distinct_uuids_UFH as varchar(100)), '(must match the number of patients)')
 
-print CONCAT('Distinct UFH UUIDs: ', CAST(@distinct_uuids_UFH as varchar(100)))
-print CONCAT('Distinct FLM UUIDs: ', CAST(@distinct_uuids_FLM as varchar(100)))
+print CONCAT('Distinct FLM PATIDs: ', CAST(@distinct_patids_FLM as varchar))
+print CONCAT('Distinct FLM UUIDs: ', CAST(@distinct_uuids_FLM as varchar(100)), '(must match the number of patients)')
 
 print CONCAT('Linked UFH patients: ', CAST(@linked_patients_UFH_FLM as varchar(100)))
 print CONCAT('Percentage of linked UFH patients: ', CAST(@linked_percentage_UFH  as varchar(100)))
