@@ -9,6 +9,7 @@ import collections  # noqa
 import multiprocessing as mp
 import os
 import pandas as pd
+import numpy as np
 import pprint  # noqa
 import sys
 import traceback
@@ -19,7 +20,9 @@ from datetime import datetime  # noqa
 from onefl import utils
 from onefl.utils import db as db_utils
 from onefl.exc import ConfigErr
-from onefl.models.linkage_entity import FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND, FLAG_SKIP_MATCH  # noqa
+from onefl.models.linkage_entity import (
+    FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND,
+    FLAG_SKIP_MATCH, FLAG_SKIP_REPEATED)
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
@@ -63,7 +66,7 @@ class LinkGenerator():
     @classmethod
     def _process_patient_row(cls, patid, pat_hashes, hash_uuid_lut,
                              rules_cache, config, session,
-                             partner_code):
+                             partner_code, skip_db_lookup):
         """
         TODO: This function is not handling the case when we run the linkage
         for the same patient twice.
@@ -115,7 +118,11 @@ class LinkGenerator():
             existing_links = hash_uuid_lut.get(ahash)
             binary_hash = unhexlify(ahash.encode('utf-8'))
 
-            if len(existing_links) == 0:
+            if skip_db_lookup:
+                # we detected two or more rows with same hash
+                uuid = utils.get_uuid()
+                flag = FLAG_SKIP_REPEATED
+            elif len(existing_links) == 0:
                 # the hash search did not find any records => create new UUID
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
@@ -152,13 +159,13 @@ class LinkGenerator():
             links, to_investigate = cls._process_two_hashes(
                 patid, pat_hashes, hash_uuid_lut,
                 rules_cache, config, session,
-                partner_code)
+                partner_code, skip_db_lookup)
         return links, to_investigate
 
     @classmethod
     def _process_two_hashes(cls, patid, pat_hashes, hash_uuid_lut,
                             rules_cache, config, session,
-                            partner_code):
+                            partner_code, skip_db_lookup):
         """
         :param patid: string representing the patient processed
         :param hash_uuid_lut: a dictionary of links found in the database
@@ -196,17 +203,16 @@ class LinkGenerator():
                           (len(existing_links_1) > 0 and
                            len(existing_links_2) == 0))
 
-        if both_not_found:
+        if both_not_found or skip_db_lookup:
             # create two links with a `fresh` UUID
             uuid = utils.get_uuid()
-            flag_1 = FLAG_HASH_NOT_FOUND
-            flag_2 = FLAG_HASH_NOT_FOUND
+            flag = FLAG_SKIP_REPEATED if skip_db_lookup else FLAG_HASH_NOT_FOUND  # noqa
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
-                linkage_flag=flag_1,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -215,7 +221,7 @@ class LinkGenerator():
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
-                linkage_flag=flag_2,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -225,10 +231,13 @@ class LinkGenerator():
             if len(existing_links_1) > 0:
                 flag_2 = FLAG_HASH_NOT_FOUND
 
-                # TODO: verify the logic:
-                #   "two distinct patids with same hash from same partner are
-                #   considered different persons"
-                if LinkageEntity.needs_to_skip_match_for_partner(
+                # Two distinct patids with same hash from same partner are
+                # considered different persons and get distinct UUIDs
+
+                if skip_db_lookup:
+                    uuid = utils.get_uuid()
+                    flag_1 = FLAG_SKIP_REPEATED
+                elif LinkageEntity.needs_to_skip_match_for_partner(
                         existing_links_1, partner_code, patid):
                     uuid = utils.get_uuid()
                     flag_1 = FLAG_SKIP_MATCH
@@ -238,6 +247,9 @@ class LinkGenerator():
             else:
                 flag_1 = FLAG_HASH_NOT_FOUND
 
+                if skip_db_lookup:
+                    uuid = utils.get_uuid()
+                    flag_2 = FLAG_SKIP_REPEATED
                 if LinkageEntity.needs_to_skip_match_for_partner(
                         existing_links_2,
                         partner_code,
@@ -360,7 +372,7 @@ class LinkGenerator():
             links, to_investigate = cls._process_patient_row(
                 patid, pat_hashes.copy(), hash_uuid_lut,
                 rules_cache, config, session,
-                partner_code)
+                partner_code, row['SKIP'])
             # cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
 
             if len(to_investigate) > 0:
@@ -391,6 +403,46 @@ class LinkGenerator():
                             ' the DB_TYPE parameter.')
 
     @classmethod
+    def _prepare_frame(cls, config, inputdir, outputdir):
+        """
+        Load the frame and detect re-used hashes - the corresponding rows
+        are marked with SKIP=True which is later used to avoid database lookups
+        """
+        EXPECTED_COLS = config['EXPECTED_COLS']
+        in_file = os.path.join(inputdir, config['IN_FILE'])
+        df = None
+
+        try:
+            df = pd.read_csv(in_file,
+                             sep=config['IN_DELIMITER'],
+                             dtype=object,
+                             skipinitialspace=True,
+                             skip_blank_lines=True,
+                             usecols=list(EXPECTED_COLS),
+                             )
+            df.fillna('', inplace=True)
+            rules = config['ENABLED_RULES']
+
+            if len(rules) == 2:
+                df['H1_REPEAT_COUNT'] = df.groupby(rules.get('1')
+                                                   )['PATID'].transform(len)
+                df['H2_REPEAT_COUNT'] = df.groupby(rules.get('2')
+                                                   )['PATID'].transform(len)
+
+                df['SKIP'] = np.where(
+                    df.H1_REPEAT_COUNT > 1, True,
+                    np.where(df.H2_REPEAT_COUNT > 1, True, False))
+            else:
+                raise Exception("Config error for ENABLED_RULES. Expected two rules!")  # noqa
+        except ValueError as exc:
+            cls.log.info("Please check if the actual column names"
+                         " in [{}] match the expected column names"
+                         " file: {}.".format(in_file, sorted(EXPECTED_COLS)))
+            cls.log.error("Error: {}".format(exc))
+
+        return df
+
+    @classmethod
     def generate(cls, config, inputdir, outputdir, partner,
                  ask=True, create_tables=True):
         """
@@ -403,52 +455,32 @@ class LinkGenerator():
 
         """
         cls._validate_config(config)
-        # engine = db_utils.get_db_engine(config)
-        EXPECTED_COLS = config['EXPECTED_COLS']
-        SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
-
-        cls.log.info("Using [{}] as source folder".format(inputdir))
-        cls.log.info("Using [{}] as source file".format(in_file))
+        cls.log.info("Using {} as input file ({})".format(in_file, utils.get_file_size(in_file)))  # noqa
         cls.log.info("Connection HOST:DB - {}/{}"
                      .format(config['DB_HOST'], config['DB_NAME']))
 
         if ask:
             confirmed = utils.ask_yes_no(
-                "Continue link procedure to create files in the [{}] folder?"
-                .format(outputdir))
+                "Run [{}] linkage to create files in the [{}] folder?"
+                .format(partner, outputdir))
 
             if not confirmed:
                 sys.exit("If you say so...")
 
-        reader = None
-
-        try:
-            reader = pd.read_csv(in_file,
-                                 sep=config['IN_DELIMITER'],
-                                 dtype=object,
-                                 skipinitialspace=True,
-                                 skip_blank_lines=True,
-                                 usecols=list(EXPECTED_COLS),
-                                 chunksize=config['LINES_PER_CHUNK'],
-                                 iterator=True)
-            cls.log.info("Reading data from file: {} ({})"
-                         .format(in_file, utils.get_file_size(in_file)))
-
-        except ValueError as exc:
-            cls.log.info("Please check if the actual column names"
-                         " in [{}] match the expected column names"
-                         " file: {}.".format(in_file,
-                                             sorted(EXPECTED_COLS)))
-            cls.log.error("Error: {}".format(exc))
+        df = cls._prepare_frame(config, inputdir, outputdir)
 
         frames = []
         investigations = []
         pool = mp.Pool(processes=NUM_CPUS)
         jobs = []
 
-        for index, df_source in enumerate(reader):
-            df_source.fillna('', inplace=True)
+        chunksize = config['LINES_PER_CHUNK']
+
+        # for index, df_source in enumerate(reader):
+        for index, group in df.groupby(np.arange(len(df)) // chunksize):
+            # cls.log.error("Frame chunk [{}]".format(index))
+            df_source = pd.DataFrame(group)
             # The magic happens here...
             job = utils.apply_async(pool,
                                     cls._process_frame,
@@ -475,24 +507,28 @@ class LinkGenerator():
         pool.close()
         pool.join()
 
-        if SAVE_OUT_FILE:
-            cls.log.info("Got {} frames. Concatenating...".format(job_count))
-            df = pd.concat(frames, ignore_index=True)
-
-            out_file = os.path.join(outputdir, config['OUT_FILE'])
-            out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
-            utils.frame_to_file(df, out_file,
-                                delimiter=config['OUT_DELIMITER'])
-            cls.log.info("Wrote output file: {} ({} data rows, {})"
-                         .format(
-                             out_file, len(df), utils.get_file_size(out_file)))
-
-            with open(out_file_investigate, 'w') as invf:
-
-                for line in investigations:
-                    invf.write("{}\n".format(line))
-
-            cls.log.info("Wrote hashes that need investigation to {}"
-                         .format(out_file_investigate))
+        if config['SAVE_OUT_FILE']:
+            cls.save_output_file(config, outputdir, job_count, frames,
+                                 investigations)
 
         return True
+
+    @classmethod
+    def save_output_file(cls, config, outputdir, job_count, frames,
+                         investigations):
+
+        cls.log.info("Got {} frames. Concatenating...".format(job_count))
+        df = pd.concat(frames, ignore_index=True)
+
+        out_file = os.path.join(outputdir, config['OUT_FILE'])
+        out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
+        utils.frame_to_file(df, out_file, delimiter=config['OUT_DELIMITER'])
+        cls.log.info("Wrote output file: {} ({} data rows, {})"
+                     .format(out_file, len(df), utils.get_file_size(out_file)))
+
+        with open(out_file_investigate, 'w') as invf:
+            for line in investigations:
+                invf.write("{}\n".format(line))
+
+        cls.log.info("Wrote hashes that need investigation to {}"
+                     .format(out_file_investigate))
