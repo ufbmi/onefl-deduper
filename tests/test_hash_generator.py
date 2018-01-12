@@ -35,6 +35,24 @@ class TestHashGenerator(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_format_race(self):
+        data = [
+            {'val': 1, 'exp': '01'},
+            {'val': '1', 'exp': '01'},
+            {'val': 2, 'exp': '02'},
+            {'val': '2', 'exp': '02'},
+            {'val': '3', 'exp': '03'},
+            {'val': '4', 'exp': '04'},
+            {'val': '5', 'exp': '05'},
+            {'val': '6', 'exp': '06'},
+            {'val': '7', 'exp': '07'},
+            {'val': 'OT', 'exp': 'OT'},
+            {'val': None, 'exp': None},
+        ]
+        for x in data:
+            actual = HashGenerator.format_race(x['val'])
+            self.assertEqual(actual, x['exp'])
+
     # @unittest.skip
     def test_hasher(self):
         """ Verify that we produce hashes properly """
