@@ -1,4 +1,4 @@
-patid	first	last	dob	sex	race
+patid	first_name	last_name	birth_date	sex	race
 01	aly	bee	1910-01-01	F
 02	aly	cee	1910-01-01		05
 03	aly	dee	1910-01-01	F	05
@@ -12,6 +12,6 @@ patid	first	last	dob	sex	race
 09	Bob	Dee	1901-02-03	M	04
 
 10	bob	dee	1900-02-03	A	04
-11	bob	dee	1901-02-03	NI	04
+11	bob	dee	1901-02-03	NI	4
 12	Bob	Dee	1901-02-03	UN	04
 13	Bob	Dee	1901-02-03	OT	NI
