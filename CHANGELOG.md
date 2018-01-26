@@ -1,7 +1,15 @@
 # Change Log
 
 
-## [0.0.6] - unreleased yet
+## [0.0.7] - unreleased yet
+
+
+## [0.0.6] - 2018-01-26
+
+### Changed
+ * [HASHER] - improved error checking
+ * [HASHER] - removed hack for PyInstaller
+
 
 ## [0.0.5] - 2017-09-18
 
