@@ -1,5 +1,7 @@
+[![DOI](https://zenodo.org/badge/76993269.svg)](https://zenodo.org/badge/latestdoi/76993269)
 
 # OneFL Deduper
+
 
 | Branch | [Travis-CI] | [Coveralls] |
 | :----- | :---------------------------: | :-------: |
