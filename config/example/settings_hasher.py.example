@@ -2,11 +2,20 @@
 Goal: store application settings
 """
 
-# TODO: check if we need to allow flexible column naming
-EXPECTED_COLS = ['patid', 'first', 'last', 'dob', 'race', 'sex']
+# Configure this dictionary with the prefered column names
+# Example:
+#   'patid': 'patid_column_name_from_the_actual_file'
+COLUMN_MAP = {
+    'patid': 'patid',
+    'first': 'first',
+    'last': 'last',
+    'dob': 'dob',
+    'race': 'race',
+    'sex': 'sex',
+}
 
-IN_DELIMITER = '\t'
-OUT_DELIMITER = '\t'
+IN_DELIMITER = ','
+OUT_DELIMITER = ','
 
 IN_FILE = 'phi.csv'
 OUT_FILE = 'phi_hashes.csv'

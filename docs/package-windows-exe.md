@@ -31,13 +31,12 @@ Python packages:
 
     pip install virtualenvwrapper==4.8.2
     pip install pypiwin32==219 
-    pip install PyInstaller==3.2
-
+    pip install PyInstaller==3.3.1
 
 # Packaging
 
 Get a fresh copy of the repository and update the **DEFAULT_VERISON**
-variable in [onefl/version.py](onefl/version.py) file.
+variable in [../onefl/version.py](../onefl/version.py) file.
 This step is necessary since both "recommended" methods for detecting 
 the package version fail ("pkg_resources" and "setuptools_scm.get_version()")
 

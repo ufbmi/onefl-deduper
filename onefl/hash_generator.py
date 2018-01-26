@@ -10,13 +10,26 @@ import sys
 import pandas as pd
 import multiprocessing as mp
 import traceback
+from dateutil import parser as dp
 from onefl.rules import AVAILABLE_RULES_MAP as rulz
 from onefl import utils
 from onefl.exc import ConfigErr
 from onefl.normalized_patient import NormalizedPatient  # noqa
 
 pd.set_option('display.width', 1500)
-VALID_RACE_VALS = ['', '01', '02', '03', '04', '05', '06', '07', 'NI', 'UN', 'OT']  # noqa
+
+COL_PATID = 'patid'
+COL_FIRST = 'first'
+COL_LAST = 'last'
+COL_DOB = 'dob'
+COL_RACE = 'race'
+COL_SEX = 'sex'
+REQUIRED_COLS = [COL_PATID, COL_FIRST, COL_LAST, COL_DOB, COL_RACE, COL_SEX]
+
+VALID_RACE_VALS = ['',
+                   '01', '02', '03', '04', '05', '06', '07',
+                   '1', '2', '3', '4', '5', '6', '7',
+                   'NI', 'UN', 'OT']
 VALID_SEX_VALS = ['', 'A', 'F', 'M', 'NI', 'UN', 'OT']
 
 # How many processes to use?
@@ -31,6 +44,26 @@ class HashGenerator():
         cls.log = logger
 
     @staticmethod
+    def format_race(val):
+        # prevent "Excel errors"
+        if str(val) in ['1', '2', '3', '4', '5', '6', '7']:
+            return '{:0>2}'.format(val)
+        return val
+
+    @staticmethod
+    def format_date(val):
+        """ Convenience method to try multiple date formats """
+        if not val:
+            return None
+        try:
+            parsed_date = dp.parse(val)
+        except Exception as exc:
+            print("Unable to parse the date: {}".format(val))
+            raise exc
+
+        return parsed_date.strftime('%Y-%m-%d')
+
+    @staticmethod
     def _process_row_series(row, rule, pattern, required_attr, config):
         """
         Compute the sha256 string for one rule.
@@ -42,14 +75,17 @@ class HashGenerator():
         :rtype: string
         :return sha_string:
         """
+        COLUMN_MAP = config['COLUMN_MAP']
 
         patient = NormalizedPatient(
-            patid=row['patid'],
-            pat_first_name=row['first'],
-            pat_last_name=row['last'],
-            pat_birth_date=row['dob'],
-            pat_sex=row['sex'],
-            pat_race=row['race']
+            patid=row[COLUMN_MAP[COL_PATID]],
+            pat_first_name=row[COLUMN_MAP[COL_FIRST]],
+            pat_last_name=row[COLUMN_MAP[COL_LAST]],
+            pat_birth_date=HashGenerator.format_date(
+                row[COLUMN_MAP[COL_DOB]]),
+            pat_sex=row[COLUMN_MAP[COL_SEX]],
+            pat_race=HashGenerator.format_race(
+                row[COLUMN_MAP[COL_RACE]])
         )
 
         if not patient.has_all_data(required_attr):
@@ -100,16 +136,28 @@ class HashGenerator():
         """
         Helper method for preventing config errors
         """
+        COLUMN_MAP = config.get('COLUMN_MAP', None)
+
+        if COLUMN_MAP is None:
+            raise ConfigErr("Please verify that the config specifies the `COLUMN_MAP` parameter!")  # noqa
+
+        # Verify that every required column is mapped
+        CONFIGURED_COLS = list(COLUMN_MAP.keys())
+        diff = list(set(REQUIRED_COLS).difference(CONFIGURED_COLS))
+        cls.log.info('REQUIRED_COLS: {}'.format(REQUIRED_COLS))
+        cls.log.info('CONFIGURED_COLS: {}'.format(CONFIGURED_COLS))
+
+        if len(diff) > 0:
+            raise ConfigErr('Please verify that the config specifies every column in the `COLUMN_MAP` parameter! Missing: {}'.format(diff))  # noqa
+
         enabled_rules = config.get('ENABLED_RULES', None)
 
         if not enabled_rules:
-            raise ConfigErr('Please verify that the config specifies'
-                            ' the `ENABLED_RULES` parameter!')
+            raise ConfigErr('Please verify that the config specifies the `ENABLED_RULES` parameter!')  # noqa
 
         for rule_code in enabled_rules:
             if rule_code not in rulz:
-                raise ConfigErr('Invalid rule code: [{}]!'
-                                ' Available codes are: {}'
+                raise ConfigErr('Invalid rule: [{}]! Available codes are: {}'
                                 .format(rule_code, rulz.keys()))
 
     @classmethod
@@ -138,11 +186,14 @@ class HashGenerator():
 
         """
         cls._validate_config(config)
-        EXPECTED_COLS = config['EXPECTED_COLS']
+
+        EXPECTED_COLS = list(config['COLUMN_MAP'].values())
         ENABLED_RULES = config.get('ENABLED_RULES')
 
         in_file = os.path.join(inputdir, config['IN_FILE'])
         cls.log.info("Using [{}] as source file".format(in_file))
+        cls.log.info("Using [{}] as record separator"
+                     .format(config['IN_DELIMITER']))
         cls.log.info("Using [{}] as salt".format(config['SALT']))
         cls.log.info("Expecting input file to contain columns: {}"
                      .format(EXPECTED_COLS))
@@ -162,17 +213,17 @@ class HashGenerator():
                                  dtype=object,
                                  skipinitialspace=True,
                                  skip_blank_lines=True,
-                                 usecols=list(EXPECTED_COLS),
+                                 usecols=EXPECTED_COLS,
                                  chunksize=config['LINES_PER_CHUNK'],
                                  iterator=True)
             cls.log.info("Reading data from file: {} ({})"
                          .format(in_file, utils.get_file_size(in_file)))
 
         except ValueError as exc:
-            cls.log.info("Please check if the actual column names"
-                         " in [{}] match the expected column names"
-                         " file: {}.".format(in_file,
-                                             sorted(EXPECTED_COLS)))
+            cls.log.info("Please check if the actual column names in [{}] "
+                         .format(in_file) +
+                         "match the configured column names: {}."
+                         .format(sorted(EXPECTED_COLS)))
             cls.log.error("Error: {}".format(exc))
 
         frames = []
@@ -184,21 +235,15 @@ class HashGenerator():
                          .format(config['LINES_PER_CHUNK'], index))
             df_source.fillna('', inplace=True)
 
-            for col in EXPECTED_COLS:
-                if col not in sorted(df_source):
-                    raise Exception("The input data frame does not have all "
-                                    "expected columns: {}"
-                                    .format(EXPECTED_COLS))
-
             # validate the values constrained to set
-            invalid_race = df_source.loc[~df_source['race'].isin(VALID_RACE_VALS)]  # noqa
-            invalid_sex = df_source.loc[~df_source['sex'].isin(VALID_SEX_VALS)]
+            invalid_race = df_source.loc[~df_source[COL_RACE].isin(VALID_RACE_VALS)]  # noqa
+            invalid_sex = df_source.loc[~df_source[COL_SEX].isin(VALID_SEX_VALS)]  # noqa
 
             if len(invalid_race) > 0:
-                cls.log.info("Please check race: {}".format(invalid_race))
+                cls.log.info("Please check race: \n{}".format(invalid_race))
                 raise Exception("The input file contains invalid value for `race` column. Please review the specs.")  # noqa
             if len(invalid_sex) > 0:
-                cls.log.warning("Please check sex: {}".format(invalid_sex))
+                cls.log.warning("Please check sex: \n{}".format(invalid_sex))
                 raise Exception("The input file contains invalid value for `sex` column. Please review the specs.")  # noqa
 
             job = utils.apply_async(pool,

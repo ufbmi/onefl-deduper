@@ -10,7 +10,7 @@
 
 Welcome to the OneFlorida "De-Duper" tool.
 
-This tool genereates "Linkage Unique Identifiers" (LUID's)
+This tool genereates "Unique Identifiers" (UID's)
 used for patient de-duplication (aka "Entity Resolution", aka "Record Linkage").
 
 
@@ -27,7 +27,7 @@ Note: The hashing process insures that "OneFlorida Domain" WILL NOT RECEIVE any 
     |    (CSV file with PHI)                                (CSV file with no PHI)
     |   +--------------------------+                       +--------------------------+
     |   |   PHI_DATA.csv           | ----> hasher.py ----> |    HASHES.csv            |
-    |   | patid, first, last,      |                       | patid, F_L_D_G, F_L_D_R  |
+    |   | patid, first, last,      |                       | patid, F_L_D_S, F_L_D_R  |
     |   | dob, sex, race           |                       |                          |
     |   +--------------------------+                       +--------------------------+
     |                                                            ||
@@ -41,7 +41,7 @@ Note: The hashing process insures that "OneFlorida Domain" WILL NOT RECEIVE any 
     |                                                            \/
     |                                                       +--------------------------+
     |                                                       |   HASHES.csv             |
-    |                                                       | patid, F_L_D_G, F_L_D_R  |
+    |                                                       | patid, F_L_D_S, F_L_D_R  |
     |                                                       +--------------------------+
     |                                                            |
     |      ____________                                          |
@@ -60,7 +60,7 @@ Note: The hashing process insures that "OneFlorida Domain" WILL NOT RECEIVE any 
     |         456,          FLM,       abc...,       def...   <--        / \
     |         789,          FLM,       987...,       012...
     |
-    |    (generate OF_ID from hashes)
+    |    (generate UID's from hashes)
     |
     + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 </pre>

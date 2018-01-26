@@ -40,6 +40,17 @@ def hasher(ctx, ask=True):
             .format(inputfolder, outputfolder, opt_ask))
 
 
+@task
+def demo(ctx, ask=True):
+    """ Generate hashes from PHI """
+    inputfolder = '.'
+    outputfolder = '.'
+    opt_ask = '--ask' if ask else ''
+
+    ctx.run('PYTHONPATH=. python run/hasher.py -i {} -o {} {}'
+            .format(inputfolder, outputfolder, opt_ask))
+
+
 @task(aliases=['link'],
       help={'partner': 'The partner name: {}'.format(VALID_PARTNERS)})
 def linker(ctx, partner, ask=True):
@@ -172,9 +183,10 @@ def clean_log(ctx):
     """ Remove log file """
     ctx.run('rm -f logs/deduper.log')
 
+
 @task
 def package_hasher(ctx):
-    # ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico --version-file=resources/version.txt run/hasher.py')
-    ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico run/hasher.py')
+    # ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico --version-file=resources/version.txt run/hasher.py')  # noqa
+    ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico run/hasher.py')  # noqa
     ctx.run('echo "Test the exe: dist/hasher.exe -v"')
     ctx.run('dist\hasher.exe -v')
