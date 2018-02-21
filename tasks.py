@@ -84,6 +84,21 @@ def link_ufh(ctx):
 
 
 @task
+def link_orh(ctx):
+    linker(ctx, partner=PartnerName.ORH.value)
+
+
+@task
+def link_umi(ctx):
+    linker(ctx, partner=PartnerName.UMI.value)
+
+
+@task
+def link_chp(ctx):
+    linker(ctx, partner=PartnerName.CHP.value)
+
+
+@task
 def lint(ctx):
     """ Show the lint score """
     ctx.run("which pylint || pip install pylint")
