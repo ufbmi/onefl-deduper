@@ -104,3 +104,4 @@ tests/data_out/
 linkage_related/
 scripts/extra_a.csv
 scripts/config.py
+scripts/out/*.csv

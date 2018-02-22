@@ -3,6 +3,8 @@
 Goal: extract rows from `file_large` with values of the `join_column`
 which do not exist in `file_small`.
 
+@author Andrei Sura <sura.andrei@gmail.com>
+
 This script is equivalent to running the mlr command:
 $mlr --tsv join -j join_column --ul --np -f large.csv small.csv > extra.csv
 
@@ -35,7 +37,7 @@ import pandas as pd
 import argparse
 
 
-def extra(args):
+def get_extra(args):
     file_large = args.file_a
     file_small = args.file_b
     join_column = args.join_column.strip()
@@ -77,7 +79,7 @@ def main():
                         help='record separator'
                         )
     args = parser.parse_args()
-    (df_common, df_extra) = extra(args)
+    (df_common, df_extra) = get_extra(args)
 
     output_file = 'extra_{}'.format(args.file_a)
     df_extra.to_csv(output_file, index=False, sep='\t')
