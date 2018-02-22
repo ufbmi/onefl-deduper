@@ -54,10 +54,20 @@ in the `config/settings_linker.py` file as needed.
 
 
 
-## Run the linker by substituting the [PARTNER] by the actual partner name
-in the following command
+## Run the linker
+
+Substitute the [PARTNERNAME] by the actual value in the following command
   
     $ PYTHONPATH=. python run/linker.py -i data -o data -p=PARTNERNAME --ask
 
 When completed, you should be able to see new rows inserted in the database,
-and an output file as  configured with `OUT_FILE` option.
+and an output file as configured with `OUT_FILE` option.
+This output file should contain four columns:
+
+    PATID   UUID    hash_1  hash_2
+
+To check how many rows have been insreted in the database you can run the
+following query:
+
+    SELECT COUNT(*) FROM LINKAGE WHERE partner_code = 'PARTNERNAME'
+
