@@ -33,8 +33,10 @@ c       3
 d       4
 
 """
+import os
 import pandas as pd
 import argparse
+OUT_PREFIX = 'extra_'
 
 
 def get_extra(args):
@@ -81,7 +83,10 @@ def main():
     args = parser.parse_args()
     (df_common, df_extra) = get_extra(args)
 
-    output_file = 'extra_{}'.format(args.file_a)
+    dir = os.path.dirname(args.file_a)
+    name = os.path.basename(args.file_a)
+    output_file = os.path.join(dir, '{}{}'.format(OUT_PREFIX, name))
+
     df_extra.to_csv(output_file, index=False, sep='\t')
     print("Wrote the {} extra rows to: {}".format(len(df_extra), output_file))
     print(df_extra.head().to_csv(sep='\t', index=False))
