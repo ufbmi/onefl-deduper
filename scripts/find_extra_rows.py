@@ -33,8 +33,10 @@ c       3
 d       4
 
 """
+import os
 import pandas as pd
 import argparse
+OUT_PREFIX = 'extra_'
 
 
 def get_extra(args):
@@ -61,7 +63,7 @@ def get_extra(args):
     df_extra = df_a[~df_a[join_column].isin(df_common[join_column])]
     print("Found {} extra row(s) in: {}".format(len(df_extra), file_large))
 
-    return (df_common, df_extra)
+    return df_extra
 
 
 def main():
@@ -79,9 +81,11 @@ def main():
                         help='record separator'
                         )
     args = parser.parse_args()
-    (df_common, df_extra) = get_extra(args)
+    df_extra = get_extra(args)
+    name = os.path.basename(args.file_a)
+    output_file = "{}{}".format(OUT_PREFIX, name)
 
-    output_file = 'extra_{}'.format(args.file_a)
+    print("Writing result to: {}".format(output_file))
     df_extra.to_csv(output_file, index=False, sep='\t')
     print("Wrote the {} extra rows to: {}".format(len(df_extra), output_file))
     print(df_extra.head().to_csv(sep='\t', index=False))
