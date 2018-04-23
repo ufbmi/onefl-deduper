@@ -4,6 +4,14 @@
 ## [0.0.7] - unreleased yet
 
 
+## [0.0.7] - 2018-04-23
+### Changed
+ * update requirements
+
+### Added
+ * [DOCS]: installation-linker.md
+
+
 ## [0.0.6] - 2018-01-26
 
 ### Changed
