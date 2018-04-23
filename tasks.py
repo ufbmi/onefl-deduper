@@ -30,6 +30,18 @@ def prep_develop(ctx):
     ctx.run('pip freeze')
 
 
+@task
+def show_libs(ctx):
+    # helper for showing installed libs
+    ctx.run("pip freeze | grep -E 'dill|pandas|pyodbc|setuptools-scm|SQLAlchemy'")  # noqa
+    ctx.run("pip freeze | grep -E 'invoke|mock|pylint|pytest-cov|tox|PyInstaller'")  # noqa
+
+
+@task
+def extract_linked(ctx):
+    ctx.run("python scripts/extract_existing_linkage_data.py -lnk")
+
+
 @task(aliases=['hash'])
 def hasher(ctx, ask=True):
     """ Generate hashes from PHI """
