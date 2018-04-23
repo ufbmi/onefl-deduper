@@ -107,6 +107,12 @@ def main():
     print("Database connection url: {}".format(url))
     conn = db.create_engine(url)
 
+    try:
+        os.makedirs(OUT_DIR, exist_ok=True)
+        print("Created output folder: {}".format(OUT_DIR))
+    except Exception as exc:
+        sys.exit("Unable to create folder [{}] due: ".format(OUT_DIR, exc))
+
     if args.linkage_only:
         out_file = os.path.join(OUT_DIR, OUT_LNK)
 
