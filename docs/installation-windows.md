@@ -57,13 +57,13 @@ so please follow them.
 
 1. Download the packages on a machine which *does* have internet connection:
 
-    $ mkdir my_pypi && cd my_pypi
-    $ pip download --platform=windows --only-binary=:all: virtualenv virtualenvwrapper invoke deduper
+        $ mkdir my_pypi && cd my_pypi
+        $ pip download --platform=windows --only-binary=:all: virtualenv virtualenvwrapper invoke deduper
 
 2. Transfer the `my_pypi` folder to the restricted windows environment
 
 3. Install the packages from within the `my_pypi` folder
 
-    $ cd C:\Users\asura\my_pypi
-    $ pip install --no-index --find-links=. --root=. pbr six stevedore invoke virtualenv
-    $ pip install --no-index --find-links=. --root=. deduper
+        $ cd C:\Users\asura\my_pypi
+        $ pip install --no-index --find-links=. --root=. pbr six stevedore invoke virtualenv
+        $ pip install --no-index --find-links=. --root=. deduper
