@@ -3,3 +3,4 @@ mock
 pylint
 pytest-cov
 tox
+PyInstaller

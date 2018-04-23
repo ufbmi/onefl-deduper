@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Goal: store shortcuts to common tasks
 
@@ -29,11 +30,34 @@ def prep_develop(ctx):
     ctx.run('pip freeze')
 
 
+@task
+def show_libs(ctx):
+    # helper for showing installed libs
+    ctx.run("pip freeze | grep -E 'dill|pandas|pyodbc|setuptools-scm|SQLAlchemy'")  # noqa
+    ctx.run("pip freeze | grep -E 'invoke|mock|pylint|pytest-cov|tox|PyInstaller'")  # noqa
+
+
+@task
+def extract_linked(ctx):
+    ctx.run("python scripts/extract_existing_linkage_data.py -lnk")
+
+
 @task(aliases=['hash'])
 def hasher(ctx, ask=True):
     """ Generate hashes from PHI """
     inputfolder = 'data'
     outputfolder = 'data'
+    opt_ask = '--ask' if ask else ''
+
+    ctx.run('PYTHONPATH=. python run/hasher.py -i {} -o {} {}'
+            .format(inputfolder, outputfolder, opt_ask))
+
+
+@task
+def demo(ctx, ask=True):
+    """ Generate hashes from PHI """
+    inputfolder = '.'
+    outputfolder = '.'
     opt_ask = '--ask' if ask else ''
 
     ctx.run('PYTHONPATH=. python run/hasher.py -i {} -o {} {}'
@@ -70,6 +94,21 @@ def link_flm(ctx):
 @task
 def link_ufh(ctx):
     linker(ctx, partner=PartnerName.UFH.value)
+
+
+@task
+def link_orh(ctx):
+    linker(ctx, partner=PartnerName.ORH.value)
+
+
+@task
+def link_umi(ctx):
+    linker(ctx, partner=PartnerName.UMI.value)
+
+
+@task
+def link_chp(ctx):
+    linker(ctx, partner=PartnerName.CHP.value)
 
 
 @task
@@ -171,3 +210,11 @@ def clean(ctx):
 def clean_log(ctx):
     """ Remove log file """
     ctx.run('rm -f logs/deduper.log')
+
+
+@task
+def package_hasher(ctx):
+    # ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico --version-file=resources/version.txt run/hasher.py')  # noqa
+    ctx.run('pyinstaller --onefile --icon resources/lock_icon.ico run/hasher.py')  # noqa
+    ctx.run('echo "Test the exe: dist/hasher.exe -v"')
+    ctx.run('dist\hasher.exe -v')

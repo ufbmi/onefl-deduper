@@ -3,6 +3,8 @@
 Goal: extract rows from `file_large` with values of the `join_column`
 which do not exist in `file_small`.
 
+@author Andrei Sura <sura.andrei@gmail.com>
+
 This script is equivalent to running the mlr command:
 $mlr --tsv join -j join_column --ul --np -f large.csv small.csv > extra.csv
 
@@ -31,12 +33,40 @@ c       3
 d       4
 
 """
+import os
 import pandas as pd
 import argparse
+OUT_PREFIX = 'extra_'
+
+
+def get_extra(args):
+    file_large = args.file_a
+    file_small = args.file_b
+    join_column = args.join_column.strip()
+    separator = args.separator.strip(' ')
+
+    print("Reading file: {}".format(file_large))
+    df_a = pd.read_csv(file_large, dtype=object, sep=separator)
+    # df_a.fillna('', inplace=True)
+    print("Found {} rows".format(len(df_a)))
+    print(df_a.head())
+
+    print("Reading file: {}".format(file_small))
+    df_b = pd.read_csv(file_small, dtype=object, sep=separator)
+    print("Found {} row(s)".format(len(df_b)))
+
+    print("Checking common lines in {} and {}".format(file_large, file_small))
+    df_common = pd.merge(df_a, df_b, on=join_column,
+                         how='inner', sort=True)
+    print("Found {} common row(s).".format(len(df_common)))
+
+    df_extra = df_a[~df_a[join_column].isin(df_common[join_column])]
+    print("Found {} extra row(s) in: {}".format(len(df_extra), file_large))
+
+    return df_extra
 
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--file_a', required=True,
                         help='the large file'
@@ -50,32 +80,12 @@ def main():
     parser.add_argument('-s', '--separator', required=False, default='\t',
                         help='record separator'
                         )
-
     args = parser.parse_args()
-    file_large = args.file_a
-    file_small = args.file_b
-    join_column = args.join_column.strip()
-    separator = args.separator.strip(' ')
-    output_file = 'extra_{}'.format(args.file_a)
+    df_extra = get_extra(args)
+    name = os.path.basename(args.file_a)
+    output_file = "{}{}".format(OUT_PREFIX, name)
 
-    print("Reading file: {}".format(file_large))
-    df_a = pd.read_csv(file_large, dtype=object, sep=separator)
-    # df_a.fillna('', inplace=True)
-    print("Found {} rows".format(len(df_a)))
-    print(df_a.head())
-
-    print("Reading file: {}".format(file_small))
-    df_b = pd.read_csv(file_small, dtype=object, sep=separator)
-    print("Found {} rows".format(len(df_b)))
-
-    print("Checking common lines in {} and {}".format(file_large, file_small))
-    df_common = pd.merge(df_a, df_b, on=join_column,
-                         how='inner', sort=True)
-    print("Found {} common rows.".format(len(df_common)))
-
-    df_extra = df_a[~df_a[join_column].isin(df_common[join_column])]
-    print("Found {} extra rows in file: {}".format(len(df_extra), file_large))
-
+    print("Writing result to: {}".format(output_file))
     df_extra.to_csv(output_file, index=False, sep='\t')
     print("Wrote the {} extra rows to: {}".format(len(df_extra), output_file))
     print(df_extra.head().to_csv(sep='\t', index=False))

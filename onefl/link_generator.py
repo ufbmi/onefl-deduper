@@ -9,6 +9,7 @@ import collections  # noqa
 import multiprocessing as mp
 import os
 import pandas as pd
+import numpy as np
 import pprint  # noqa
 import sys
 import traceback
@@ -19,7 +20,9 @@ from datetime import datetime  # noqa
 from onefl import utils
 from onefl.utils import db as db_utils
 from onefl.exc import ConfigErr
-from onefl.models.linkage_entity import FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND, FLAG_SKIP_MATCH  # noqa
+from onefl.models.linkage_entity import (
+    FLAG_HASH_NOT_FOUND, FLAG_HASH_FOUND,
+    FLAG_SKIP_MATCH, FLAG_SKIP_REPEATED)
 from onefl.models.linkage_entity import LinkageEntity
 from onefl.models.rule_entity import RuleEntity  # noqa
 # from onefl.rules import AVAILABLE_RULES_MAP as rulz
@@ -58,13 +61,12 @@ class LinkGenerator():
                       .format(len(hashes)))
         hash_uuid_lut = LinkageEntity.init_hash_uuid_lut(session,
                                                          list(hashes))
-
         return hash_uuid_lut
 
     @classmethod
     def _process_patient_row(cls, patid, pat_hashes, hash_uuid_lut,
                              rules_cache, config, session,
-                             partner_code):
+                             partner_code, skip_db_lookup):
         """
         TODO: This function is not handling the case when we run the linkage
         for the same patient twice.
@@ -93,39 +95,50 @@ class LinkGenerator():
             # only one hash was received
             rule_code, ahash = pat_hashes.popitem()
             """
-            TODO: there are multiple cases when the same hash is associated
+            Note: there are multiple cases when the same hash is associated
             with 2 or 3 different patients from the same partner --
-            which means that storing and checking only the first link object
-            in the LUT can result in linking of ambiguous hashes.
+            which means that we have to checking every link object
+            in the LUT to avoid linking different patids even if they have
+            same hash value.
 
-            Helper query:
-                select
+            Example query:
+                SELECT
                     linkage_hash, count(*) cc
-                from
+                FROM
                     linkage
-                where
+                WHERE
                     linkage_flag = 2  -- FLAG_SKIP_MATCH
                     and partner_code = 'xyz'
-                group by linkage_hash
-                having
-                    count(*) > 1
+                GROUP BY
+                    linkage_hash
+                HAVING
+                    COUNT(*) > 1
             """
-            existing_link = hash_uuid_lut.get(ahash)
+            # list type
+            existing_links = hash_uuid_lut.get(ahash)
             binary_hash = unhexlify(ahash.encode('utf-8'))
 
-            if existing_link is None:
-                # create new UUID
+            if skip_db_lookup:
+                # we detected two or more rows with same hash
+                uuid = utils.get_uuid()
+                flag = FLAG_SKIP_REPEATED
+            elif len(existing_links) == 0:
+                # the hash search did not find any records => create new UUID
                 uuid = utils.get_uuid()
                 flag = FLAG_HASH_NOT_FOUND
             else:
                 # If we find a link with the same hash from the same source
                 # we ignore it and mark it accordingly
-                if existing_link.needs_to_skip_match_for_partner(partner_code):
+                if LinkageEntity.needs_to_skip_match_for_partner(
+                        existing_links,
+                        partner_code,
+                        patid):
                     uuid = utils.get_uuid()
                     flag = FLAG_SKIP_MATCH
                 else:
-                    # reuse the existing UUID
-                    uuid = existing_link.linkage_uuid
+                    # reuse the first existing UUID
+                    # TODO: check if the source of the link matters here?
+                    uuid = existing_links[0].linkage_uuid
                     flag = FLAG_HASH_FOUND
 
             new_link = LinkageEntity.create(
@@ -146,14 +159,18 @@ class LinkGenerator():
             links, to_investigate = cls._process_two_hashes(
                 patid, pat_hashes, hash_uuid_lut,
                 rules_cache, config, session,
-                partner_code)
+                partner_code, skip_db_lookup)
         return links, to_investigate
 
     @classmethod
     def _process_two_hashes(cls, patid, pat_hashes, hash_uuid_lut,
                             rules_cache, config, session,
-                            partner_code):
+                            partner_code, skip_db_lookup):
         """
+        :param patid: string representing the patient processed
+        :param hash_uuid_lut: a dictionary of links found in the database
+            for every hash associated with the patid we are processing
+
         Note: a `1` in the comments below indicates that a hash is already in
             the database!
 
@@ -174,26 +191,28 @@ class LinkGenerator():
         # the logic work for "n" rules
         rule_code_1, ahash_1 = pat_hashes.popitem()
         rule_code_2, ahash_2 = pat_hashes.popitem()
-        existing_link_1 = hash_uuid_lut.get(ahash_1)
-        existing_link_2 = hash_uuid_lut.get(ahash_2)
 
-        both_not_found = existing_link_1 is None and existing_link_2 is None
-        only_one_found = ((existing_link_1 is None and
-                           existing_link_2 is not None) or
-                          (existing_link_1 is not None and
-                           existing_link_2 is None))
+        # The dictionary contains lists of links
+        existing_links_1 = hash_uuid_lut.get(ahash_1)
+        existing_links_2 = hash_uuid_lut.get(ahash_2)
 
-        if both_not_found:
+        both_not_found = (len(existing_links_1) == 0
+                          and len(existing_links_2) == 0)
+        only_one_found = ((len(existing_links_1) == 0 and
+                           len(existing_links_2) > 0) or
+                          (len(existing_links_1) > 0 and
+                           len(existing_links_2) == 0))
+
+        if both_not_found or skip_db_lookup:
             # create two links with a `fresh` UUID
             uuid = utils.get_uuid()
-            flag_1 = FLAG_HASH_NOT_FOUND
-            flag_2 = FLAG_HASH_NOT_FOUND
+            flag = FLAG_SKIP_REPEATED if skip_db_lookup else FLAG_HASH_NOT_FOUND  # noqa
 
             new_link_1 = LinkageEntity.create(
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_1),
                 linkage_patid=patid,
-                linkage_flag=flag_1,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
@@ -202,33 +221,43 @@ class LinkGenerator():
                 partner_code=partner_code,
                 rule_id=rules_cache.get(rule_code_2),
                 linkage_patid=patid,
-                linkage_flag=flag_2,
+                linkage_flag=flag,
                 linkage_uuid=uuid,
                 linkage_hash=unhexlify(ahash_2.encode('utf-8')),
                 linkage_added_at=added_date)
 
         elif only_one_found:
             # reuse the existing UUID
-            if existing_link_1 is not None:
+            if len(existing_links_1) > 0:
                 flag_2 = FLAG_HASH_NOT_FOUND
 
-                # TODO: verify the logic:
-                #   "two distinct patids with same hash from same partner are
-                #   considered different persons"
-                if existing_link_1.needs_to_skip_match_for_partner(partner_code):  # noqa
+                # Two distinct patids with same hash from same partner are
+                # considered different persons and get distinct UUIDs
+
+                if skip_db_lookup:
+                    uuid = utils.get_uuid()
+                    flag_1 = FLAG_SKIP_REPEATED
+                elif LinkageEntity.needs_to_skip_match_for_partner(
+                        existing_links_1, partner_code, patid):
                     uuid = utils.get_uuid()
                     flag_1 = FLAG_SKIP_MATCH
                 else:
-                    uuid = existing_link_1.linkage_uuid
+                    uuid = existing_links_1[0].linkage_uuid
                     flag_1 = FLAG_HASH_FOUND
             else:
                 flag_1 = FLAG_HASH_NOT_FOUND
 
-                if existing_link_2.needs_to_skip_match_for_partner(partner_code):  # noqa
+                if skip_db_lookup:
+                    uuid = utils.get_uuid()
+                    flag_2 = FLAG_SKIP_REPEATED
+                if LinkageEntity.needs_to_skip_match_for_partner(
+                        existing_links_2,
+                        partner_code,
+                        patid):
                     uuid = utils.get_uuid()
                     flag_2 = FLAG_SKIP_MATCH
                 else:
-                    uuid = existing_link_2.linkage_uuid
+                    uuid = existing_links_2[0].linkage_uuid
                     flag_2 = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
@@ -250,11 +279,14 @@ class LinkGenerator():
                 linkage_added_at=added_date)
         else:
             # both are found
-            if existing_link_1.needs_to_skip_match_for_partner(partner_code):
+            if LinkageEntity.needs_to_skip_match_for_partner(
+                    existing_links_1,
+                    partner_code,
+                    patid):
                 uuid = utils.get_uuid()
                 flag = FLAG_SKIP_MATCH
             else:
-                uuid = existing_link_1.linkage_uuid
+                uuid = existing_links_1[0].linkage_uuid
                 flag = FLAG_HASH_FOUND
 
             new_link_1 = LinkageEntity.create(
@@ -266,10 +298,12 @@ class LinkGenerator():
                 linkage_hash=unhexlify(ahash_1.encode('utf-8')),
                 linkage_added_at=added_date)
 
-            # UUID's match - insert row for the second hash too
-            if (existing_link_1.linkage_uuid ==
-                    existing_link_2.linkage_uuid):
-                # consensus hence insert row for hash 2 too
+            distinct_uuids = LinkageEntity.get_unique_uuids(
+                existing_links_1,
+                existing_links_2)
+
+            if 1 == len(distinct_uuids):
+                # UUID's match - insert row for the second hash too
                 new_link_2 = LinkageEntity.create(
                     partner_code=partner_code,
                     rule_id=rules_cache.get(rule_code_2),
@@ -281,15 +315,15 @@ class LinkGenerator():
             else:
                 # the UUID's do not match - we need to investigate
                 to_investigate = {
-                    ahash_2: [existing_link_1.linkage_uuid,
-                              existing_link_2.linkage_uuid]
+                    ahash_2: [
+                        [lnk.linkage_uuid for lnk in existing_links_1] +
+                        [lnk.linkage_uuid for lnk in existing_links_2]
+                    ]
                 }
                 cls.log.warning("Hashes of the patid [{}] are linked"
-                                " to two distinct UUIDs: {}, {}."
+                                " to two distinct UUIDs: {}."
                                 " We linked only the first hash!"
-                                .format(patid,
-                                        existing_link_1.linkage_uuid,
-                                        existing_link_2.linkage_uuid))
+                                .format(patid, to_investigate))
                 return {ahash_1: new_link_1}, to_investigate
 
         links[ahash_1] = new_link_1
@@ -315,11 +349,11 @@ class LinkGenerator():
         df = pd.DataFrame()
         df['PATID'] = df_source['PATID']
         investigations = []
-        hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
-        mapped_hashes = {ahash: link.linkage_uuid
-                         for ahash, link in hash_uuid_lut.items()
-                         if link is not None}
         rules_cache = RuleEntity.get_rules_cache(session)
+
+        hash_uuid_lut = cls._populate_hash_uuid_lut(config, session, df_source)
+        mapped_hashes = {ahash: links
+                         for ahash, links in hash_uuid_lut.items()}
         cls.log.debug("Found {} linked hashes in db: {}"
                       .format(len(mapped_hashes), mapped_hashes))
 
@@ -334,13 +368,12 @@ class LinkGenerator():
             if len(pat_hashes) < 1:
                 patients_with_no_hashes.append(patid)
 
-            cls.log.debug("Parsing row for patient {} with {} hashes"
-                          .format(patid, len(pat_hashes)))
+            # cls.log.debug("Parsing row for patient {} with {} hashes".format(patid, len(pat_hashes)))  # noqa
             links, to_investigate = cls._process_patient_row(
                 patid, pat_hashes.copy(), hash_uuid_lut,
                 rules_cache, config, session,
-                partner_code)
-            cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
+                partner_code, row['SKIP'])
+            # cls.log.debug("Created {} links for patid: {}".format(len(links), patid))  # noqa
 
             if len(to_investigate) > 0:
                 investigations.append(to_investigate)
@@ -370,6 +403,46 @@ class LinkGenerator():
                             ' the DB_TYPE parameter.')
 
     @classmethod
+    def _prepare_frame(cls, config, inputdir, outputdir):
+        """
+        Load the frame and detect re-used hashes - the corresponding rows
+        are marked with SKIP=True which is later used to avoid database lookups
+        """
+        EXPECTED_COLS = config['EXPECTED_COLS']
+        in_file = os.path.join(inputdir, config['IN_FILE'])
+        df = None
+
+        try:
+            df = pd.read_csv(in_file,
+                             sep=config['IN_DELIMITER'],
+                             dtype=object,
+                             skipinitialspace=True,
+                             skip_blank_lines=True,
+                             usecols=list(EXPECTED_COLS),
+                             )
+            df.fillna('', inplace=True)
+            rules = config['ENABLED_RULES']
+
+            if len(rules) == 2:
+                df['H1_REPEAT_COUNT'] = df.groupby(rules.get('1')
+                                                   )['PATID'].transform(len)
+                df['H2_REPEAT_COUNT'] = df.groupby(rules.get('2')
+                                                   )['PATID'].transform(len)
+
+                df['SKIP'] = np.where(
+                    df.H1_REPEAT_COUNT > 1, True,
+                    np.where(df.H2_REPEAT_COUNT > 1, True, False))
+            else:
+                raise Exception("Config error for ENABLED_RULES. Expected two rules!")  # noqa
+        except ValueError as exc:
+            cls.log.info("Please check if the actual column names"
+                         " in [{}] match the expected column names"
+                         " file: {}.".format(in_file, sorted(EXPECTED_COLS)))
+            cls.log.error("Error: {}".format(exc))
+
+        return df
+
+    @classmethod
     def generate(cls, config, inputdir, outputdir, partner,
                  ask=True, create_tables=True):
         """
@@ -382,52 +455,32 @@ class LinkGenerator():
 
         """
         cls._validate_config(config)
-        # engine = db_utils.get_db_engine(config)
-        EXPECTED_COLS = config['EXPECTED_COLS']
-        SAVE_OUT_FILE = config['SAVE_OUT_FILE']
         in_file = os.path.join(inputdir, config['IN_FILE'])
-
-        cls.log.info("Using [{}] as source folder".format(inputdir))
-        cls.log.info("Using [{}] as source file".format(in_file))
+        cls.log.info("Using {} as input file ({})".format(in_file, utils.get_file_size(in_file)))  # noqa
         cls.log.info("Connection HOST:DB - {}/{}"
                      .format(config['DB_HOST'], config['DB_NAME']))
 
         if ask:
             confirmed = utils.ask_yes_no(
-                "Continue link procedure to create files in the [{}] folder?"
-                .format(outputdir))
+                "Run [{}] linkage to create files in the [{}] folder?"
+                .format(partner, outputdir))
 
             if not confirmed:
                 sys.exit("If you say so...")
 
-        reader = None
-
-        try:
-            reader = pd.read_csv(in_file,
-                                 sep=config['IN_DELIMITER'],
-                                 dtype=object,
-                                 skipinitialspace=True,
-                                 skip_blank_lines=True,
-                                 usecols=list(EXPECTED_COLS),
-                                 chunksize=config['LINES_PER_CHUNK'],
-                                 iterator=True)
-            cls.log.info("Reading data from file: {} ({})"
-                         .format(in_file, utils.get_file_size(in_file)))
-
-        except ValueError as exc:
-            cls.log.info("Please check if the actual column names"
-                         " in [{}] match the expected column names"
-                         " file: {}.".format(in_file,
-                                             sorted(EXPECTED_COLS)))
-            cls.log.error("Error: {}".format(exc))
+        df = cls._prepare_frame(config, inputdir, outputdir)
 
         frames = []
         investigations = []
         pool = mp.Pool(processes=NUM_CPUS)
         jobs = []
 
-        for index, df_source in enumerate(reader):
-            df_source.fillna('', inplace=True)
+        chunksize = config['LINES_PER_CHUNK']
+
+        # for index, df_source in enumerate(reader):
+        for index, group in df.groupby(np.arange(len(df)) // chunksize):
+            # cls.log.error("Frame chunk [{}]".format(index))
+            df_source = pd.DataFrame(group)
             # The magic happens here...
             job = utils.apply_async(pool,
                                     cls._process_frame,
@@ -449,29 +502,33 @@ class LinkGenerator():
                                  .format(index, job_count))
             except Exception as exc:
                 cls.log.error("Job [{}] error: {}".format(index, exc))
-                mp.get_log().error(traceback.format_exc())
+                cls.log.error(traceback.format_exc())
 
         pool.close()
         pool.join()
 
-        if SAVE_OUT_FILE:
-            cls.log.info("Got {} frames. Concatenating...".format(job_count))
-            df = pd.concat(frames, ignore_index=True)
-
-            out_file = os.path.join(outputdir, config['OUT_FILE'])
-            out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
-            utils.frame_to_file(df, out_file,
-                                delimiter=config['OUT_DELIMITER'])
-            cls.log.info("Wrote output file: {} ({} data rows, {})"
-                         .format(
-                             out_file, len(df), utils.get_file_size(out_file)))
-
-            with open(out_file_investigate, 'w') as invf:
-
-                for line in investigations:
-                    invf.write("{}\n".format(line))
-
-            cls.log.info("Wrote hashes that need investigation to {}"
-                         .format(out_file_investigate))
+        if config['SAVE_OUT_FILE']:
+            cls.save_output_file(config, outputdir, job_count, frames,
+                                 investigations)
 
         return True
+
+    @classmethod
+    def save_output_file(cls, config, outputdir, job_count, frames,
+                         investigations):
+
+        cls.log.info("Got {} frames. Concatenating...".format(job_count))
+        df = pd.concat(frames, ignore_index=True)
+
+        out_file = os.path.join(outputdir, config['OUT_FILE'])
+        out_file_investigate = os.path.join(outputdir, config['OUT_FILE_INVESTIGATE'])  # noqa
+        utils.frame_to_file(df, out_file, delimiter=config['OUT_DELIMITER'])
+        cls.log.info("Wrote output file: {} ({} data rows, {})"
+                     .format(out_file, len(df), utils.get_file_size(out_file)))
+
+        with open(out_file_investigate, 'w') as invf:
+            for line in investigations:
+                invf.write("{}\n".format(line))
+
+        cls.log.info("Wrote hashes that need investigation to {}"
+                     .format(out_file_investigate))

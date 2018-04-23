@@ -7,7 +7,10 @@ Goal: implement tests for `LinkGenerator` class
 # flake8: noqa
 import os
 import unittest
+import numpy as np
+import pandas as pd
 import pandas.util.testing as tm  # noqa
+from io import StringIO
 from base_test import BaseTestCase
 from onefl.config import Config
 from onefl import logutils
@@ -30,6 +33,30 @@ class TestLinkGenerator(BaseTestCase):
 
     def tearDown(self):
         pass
+
+    def test_prepare_frame(self):
+        csv = StringIO(u"""
+PATID, HASH_1, HASH_2
+pat_1, a, b
+pat_2, x
+pat_3, , y
+pat_4, a, c
+pat_5, d, b
+pat_6, e, b
+pat_7, f, g
+""")
+        df = pd.read_csv(
+                csv,
+                sep=",",
+                skipinitialspace=True,
+                dtype=object,)
+        df.fillna('', inplace=True)
+        df['H1_REPEAT_COUNT'] = df.groupby('HASH_1')['HASH_1'].transform(len)
+        df['H2_REPEAT_COUNT'] = df.groupby('HASH_2')['HASH_2'].transform(len)
+
+        df['SKIP'] = np.where(df.H1_REPEAT_COUNT > 1, True,
+                              np.where(df.H2_REPEAT_COUNT > 1, True, False))
+        self.assertTrue(np.count_nonzero(df['SKIP']) == 4)
 
     def test_linker(self):
         """ Verify that we produce hashes properly """

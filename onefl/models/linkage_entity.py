@@ -30,6 +30,7 @@ from onefl.models.rule_entity import RuleEntity  # noqa
 FLAG_HASH_NOT_FOUND = 0  # 'hash not found'
 FLAG_HASH_FOUND = 1  # 'hash found'
 FLAG_SKIP_MATCH = 2  # flag rows which should not participate in matching
+FLAG_SKIP_REPEATED = 3  # flag rows from same partner having same hash
 
 
 __all__ = ['LinkageEntity']
@@ -75,36 +76,61 @@ class LinkageEntity(CRUDMixin, DeclarativeBase):
     def friendly_hash(self):
         return utils.hexlify(self.linkage_hash)
 
-    def needs_to_skip_match_for_partner(self, partner_code):
+    @staticmethod
+    def needs_to_skip_match_for_partner(links,
+                                        processed_partner_code,
+                                        processed_patid):
         """
         Note: This functions is used to insure that ambiguous hashes
         are ignored, which results in a reduction of de-duplication rate.
         """
-        if (self.partner_code == partner_code or
-                self.linkage_flag == FLAG_SKIP_MATCH):
-            return True
+        for link in links:
+            # print("Checking {} - {}".format(link.partner_code, link.linkage_patid))  # noqa
+            if ((link.partner_code == processed_partner_code
+                    and link.linkage_patid != processed_patid)
+                    or link.linkage_flag == FLAG_SKIP_MATCH):
+                return True
+
         return False
+
+    @staticmethod
+    def get_unique_uuids(list_a, list_b):
+        unique_uuids = set()
+
+        for link in list_a + list_b:
+            unique_uuids.add(link.linkage_uuid)
+
+        return unique_uuids
 
     @staticmethod
     def init_hash_uuid_lut(session, hashes):
         """
-        From the list [x, y, z] of hashes return
+        From the list [hash_x, hash_y, hash_z] of hashes return
         a dictionary which tells if a chunk was `linked` or not:
-            {x: LinkageEntity, y: LinkageEntity, z: None}
+            {
+                hash_x: [LinkageEntity_source_a, LinkageEntity_source_b],
+                hash_y: [LinkageEntity_source_a],
+                hash_z: []
+            }
         """
         # Note: unhexlify is necessary since the database stores
         # binary representations of the hashes
         bin_hashes = [binascii.unhexlify(ahash.encode('utf-8'))
                       for ahash in hashes]
+        # print("==> Query hashes: {}".format(bin_hashes))
         links = session.query(LinkageEntity).filter(
             LinkageEntity.linkage_hash.in_(bin_hashes)).all()
-        links_cache = {link.friendly_hash(): link for link in links}
 
+        # lut = defaultdict(lambda: [])
         lut = {}
 
-        # Extra loop so we can provide an entry for hashes not found in the db
         for ahash in hashes:
-            lut[ahash] = links_cache.get(ahash, None)
+            # instantiate every bucket even if the hash has no record in the db
+            lut[ahash] = []
+
+        for link in links:
+            # collect every link in the corresponding bucket
+            lut[link.friendly_hash()].append(link)
 
         return lut
 

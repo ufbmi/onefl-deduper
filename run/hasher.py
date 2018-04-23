@@ -6,9 +6,13 @@ Goal: Implement the entry point for the hash generator
     Andrei Sura <sura.andrei@gmail.com>
 """
 
+import os
+import sys
 import time
 import argparse
 from datetime import timedelta
+from multiprocessing import freeze_support
+
 from onefl import logutils
 from onefl.config import Config
 from onefl.hash_generator import HashGenerator
@@ -83,4 +87,5 @@ def main():
         logger.error("Failed!")
 
 if __name__ == '__main__':
+    freeze_support()
     main()

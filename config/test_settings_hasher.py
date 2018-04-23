@@ -2,8 +2,17 @@
 Goal: store application settings
 """
 
-# TODO: check if we need to allow flexible column naming
-EXPECTED_COLS = ['patid', 'first', 'last', 'dob', 'race', 'sex']
+# Configure this dictionary with the prefered column names
+# Example:
+#   'patid': 'patid_column_name_from_the_actual_file'
+COLUMN_MAP = {
+    'patid': 'patid',
+    'first': 'first_name',
+    'last': 'last_name',
+    'dob': 'birth_date',
+    'race': 'race',
+    'sex': 'sex',
+}
 
 IN_DELIMITER = '\t'
 OUT_DELIMITER = '\t'

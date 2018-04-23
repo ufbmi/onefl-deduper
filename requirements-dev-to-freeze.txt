@@ -1,5 +1,6 @@
-invoke==0.20.4
+invoke==0.22.1
 mock==2.0.0
-pylint==1.7.2
+pylint==1.8.4
 pytest-cov==2.5.1
-tox==2.7.0
+tox==3.0.0
+PyInstaller==3.3.1
