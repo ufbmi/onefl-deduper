@@ -32,6 +32,10 @@ where you can grep, unzip, and find files easy.
 
         $ unzip hasher_software_44e42ba2a056dec3b826c3ebb4d8cb46.zip
 
+or copy the folder from the repo 
+
+[exe_releases/hasher_md5sum_44e42ba2a056dec3b826c3ebb4d8cb46/]()
+
 - verify that the extracted folder structure looks like
 
         .
