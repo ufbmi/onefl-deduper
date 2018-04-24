@@ -1,0 +1,15 @@
+patid,first,last,dob,sex,race
+1,aly,bee,1/1/2010,F,
+2,aly,cee,1/1/2010,,5
+2a,aly,cee,1/1/2010,,05
+3,aly,dee,1/1/2010,F,5
+4,Aly,Bee,1/1/2010,F,2
+5,aly,Cee,1/1/2010,F,2
+6,aly,Dee,1/1/2010,F,2
+7,bob,dee,2/2/2000,M,3
+8,bob,dee,2/3/2001,M,3
+9,Bob,Dee,2/3/2001,M,4
+10,bob,dee,2/3/2000,A,4
+11,bob,dee,2/3/2001,NI,4
+12,Bob,Dee,02-03-2001,UN,4
+13,Bob,Dee,2001/2/03,OT,4
