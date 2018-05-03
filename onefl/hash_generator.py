@@ -75,17 +75,13 @@ class HashGenerator():
         :rtype: string
         :return sha_string:
         """
-        COLUMN_MAP = config['COLUMN_MAP']
-
         patient = NormalizedPatient(
-            patid=row[COLUMN_MAP[COL_PATID]],
-            pat_first_name=row[COLUMN_MAP[COL_FIRST]],
-            pat_last_name=row[COLUMN_MAP[COL_LAST]],
-            pat_birth_date=HashGenerator.format_date(
-                row[COLUMN_MAP[COL_DOB]]),
-            pat_sex=row[COLUMN_MAP[COL_SEX]],
-            pat_race=HashGenerator.format_race(
-                row[COLUMN_MAP[COL_RACE]])
+            patid=row[COL_PATID],
+            pat_first_name=row[COL_FIRST],
+            pat_last_name=row[COL_LAST],
+            pat_birth_date=HashGenerator.format_date(row[COL_DOB]),
+            pat_sex=row[COL_SEX],
+            pat_race=HashGenerator.format_race(row[COL_RACE])
         )
 
         if not patient.has_all_data(required_attr):
@@ -116,7 +112,7 @@ class HashGenerator():
         df = pd.DataFrame()
 
         # keep the patid from the source
-        df['PATID'] = df_source['patid']
+        df['PATID'] = df_source[COL_PATID]
 
         for i, rule in enumerate(rulz):
             rule_data = rulz.get(rule)
@@ -188,6 +184,8 @@ class HashGenerator():
         cls._validate_config(config)
 
         EXPECTED_COLS = list(config['COLUMN_MAP'].values())
+        RENAME_MAP = {v: k for (k, v) in config['COLUMN_MAP'].items()}
+
         ENABLED_RULES = config.get('ENABLED_RULES')
 
         in_file = os.path.join(inputdir, config['IN_FILE'])
@@ -234,15 +232,16 @@ class HashGenerator():
             cls.log.info("Processing {} lines of frame {}"
                          .format(config['LINES_PER_CHUNK'], index))
             df_source.fillna('', inplace=True)
+            df_source.rename(columns=RENAME_MAP, inplace=True)
 
             # validate the values constrained to set
             invalid_race = df_source.loc[~df_source[COL_RACE].isin(VALID_RACE_VALS)]  # noqa
             invalid_sex = df_source.loc[~df_source[COL_SEX].isin(VALID_SEX_VALS)]  # noqa
 
-            if len(invalid_race) > 0:
+            if not (invalid_race.empty):
                 cls.log.info("Please check race: \n{}".format(invalid_race))
                 raise Exception("The input file contains invalid value for `race` column. Please review the specs.")  # noqa
-            if len(invalid_sex) > 0:
+            if not (invalid_sex.empty):
                 cls.log.warning("Please check sex: \n{}".format(invalid_sex))
                 raise Exception("The input file contains invalid value for `sex` column. Please review the specs.")  # noqa
 
