@@ -32,9 +32,9 @@ where you can grep, unzip, and find files easy.
 
         $ unzip hasher_software_44e42ba2a056dec3b826c3ebb4d8cb46.zip
 
-or copy the folder from the repo 
+or copy the folder from the repo
 
-[exe_releases/hasher_md5sum_44e42ba2a056dec3b826c3ebb4d8cb46/]()
+[../exe_releases/hasher_md5sum_44e42ba2a056dec3b826c3ebb4d8cb46/](../exe_releases/hasher_md5sum_44e42ba2a056dec3b826c3ebb4d8cb46/)
 
 - verify that the extracted folder structure looks like
 
@@ -60,7 +60,7 @@ The output file should have the following columns: `patid`, `F_L_D_G`, `F_L_D_R`
 - replace the `phi.csv` with actual data and re-run the `hasher.exe`
 
 - verify that the number of lines in both files is the same
-        
+
         $ wc -l phi.csv
         $ wc -l phi_hashes.csv
 
@@ -72,12 +72,11 @@ The output file should have the following columns: `patid`, `F_L_D_G`, `F_L_D_R`
 The benefit of this tool is that you get a `Linux-lite` environment
 where you can grep, unzip, and find files easily.
 
-2. download and install the latest python 3 release (python >= 3.4) from 
+2. download and install the latest python 3 release (python >= 3.4) from
     [python-3.6.5.exe](https://www.python.org/ftp/python/3.6.5/python-3.6.5.exe)
 
 Note: Make sure that you have the option **"Add Python to environment variables"**
 checked when asked during installation.
-
 
 3. start the "Git Bash" console
 
@@ -106,15 +105,16 @@ as an active python environment
 
         $ mkdir -p ~/deduper/logs
 
-10. create a config file by using the
+10. create a config file by downloading
 [`config/example/settings_hasher.py.example`](https://github.com/ufbmi/onefl-deduper/blob/master/config/example/settings_hasher.py.example)
 file as a template
 
-        $ cp config/example/settings_hasher.py.example ~/deduper/settings_hasher.py
+        $ wget https://github.com/ufbmi/onefl-deduper/blob/master/config/example/settings_hasher.py.example settings_hasher.py
 
 11. save the test input file
 [phi.csv](https://github.com/ufbmi/onefl-deduper/blob/master/phi.csv)
 
+        $ wget https://github.com/ufbmi/onefl-deduper/blob/master/phi.csv
 
 12. display the software version and run it
 
@@ -131,7 +131,7 @@ You should get some output indicating that a file was produced:
 
 
 14. verify that the number of lines in both files is the same
-        
+
         $ wc -l phi.csv
         $ wc -l phi_hashes.csv
 
@@ -139,7 +139,7 @@ You should get some output indicating that a file was produced:
 
 # Section C - install on a machine without internet access
 
-Steps 1-5 are necessary to obtain the installation files which 
+Steps 1-5 are necessary to obtain the installation files which
 will be transferred to the machine without internet access
 
 
@@ -148,7 +148,7 @@ will be transferred to the machine without internet access
 The benefit of this tool is that you get a `Linux-lite` environment
 where you can grep, unzip, and find files easily.
 
-2. download and install the latest python 3 release (python >= 3.4) from 
+2. download and install the latest python 3 release (python >= 3.4) from
     [python-3.6.5.exe](https://www.python.org/ftp/python/3.6.5/python-3.6.5.exe)
 
 Note: Make sure that you have the option **"Add Python to environment variables"**
@@ -159,7 +159,7 @@ checked when asked during installation.
 4. create a folder for storing installation files
 
         $ cd ~
-        $ mkdir my_pypi 
+        $ mkdir my_pypi
 
 5. download the installation files
 
@@ -235,6 +235,6 @@ file as a template
 16. replace the `phi.csv` with actual data and re-run the `hasher.exe`
 
 17. verify that the number of lines in both files is the same
-        
+
         $ wc -l phi.csv
         $ wc -l phi_hashes.csv
