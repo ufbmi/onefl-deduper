@@ -161,10 +161,13 @@ checked when asked during installation.
         $ cd ~
         $ mkdir my_pypi
 
-5. download the installation files
+5. download the installation files, the config file and sample input file
 
         $ pip download pandas
         $ pip download virtualenv invoke deduper
+
+        $ wget https://github.com/ufbmi/onefl-deduper/blob/master/config/example/settings_hasher.py.example settings_hasher.py
+        $ wget https://github.com/ufbmi/onefl-deduper/blob/master/phi.csv
 
     At this point the contents of the `my_pypi` folder should look something like:
 
@@ -184,6 +187,9 @@ checked when asked during installation.
         virtualenv_clone-0.3.0-py2.py3-none-any.whl
         virtualenv-15.2.0-py2.py3-none-any.whl
         virtualenvwrapper-4.8.2-py2.py3-none-any.whl
+        ---
+        settings_hasher.py
+        phi.csv
 
 6. Transfer the `my_pypi` folder to the **restricted** windows machine
 
@@ -192,12 +198,12 @@ checked when asked during installation.
 
 8. Start the "Git Bash" executable on the **restricted** windows machine
 
-        $ pip --version
+9. create a folder for storing the installation files
 
-9. create a folder for storing dependencies
+        $ mkdir -p ~/deduper/logs
+        $ cd ~/deduper
 
-        $ cd ~
-        $ mkdir -p deduper/logs
+Note: the next steps assume that the `my_pipy` folder is inside the `~/deduper folder`
 
 10. create and activate the isolation environment
 
@@ -216,15 +222,16 @@ as an active python environment
 [`config/example/settings_hasher.py.example`](https://github.com/ufbmi/onefl-deduper/blob/master/config/example/settings_hasher.py.example)
 file as a template
 
-        $ cp config/example/settings_hasher.py.example ~/deduper/settings_hasher.py
+        $ cp ~/deduper/my_pypi/settings_hasher.py ~/deduper/settings_hasher.py
 
-14. save the test input file
-[phi.csv](https://github.com/ufbmi/onefl-deduper/blob/master/phi.csv)
+14. copy the test input file [phi.csv](https://github.com/ufbmi/onefl-deduper/blob/master/phi.csv)
 
+        $ cp ~/deduper/my_pypi/phi.csv .
+        
 15. display the software version and run it
 
         $ hasher.exe -v
-        $ hasher.exe -c ~/deduper/settings_hasher.py
+        $ hasher.exe -c settings_hasher.py
 
     You should get some output indicating that a file was produced:
 
