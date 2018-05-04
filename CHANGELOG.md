@@ -1,8 +1,15 @@
 # Change Log
 
 
-## [0.0.7] - unreleased yet
+## [0.0.9] - unreleased yet
 
+
+## [0.0.8] - 2018-05-04
+### Changed
+ * improved instructions for installation on windows
+
+### Added
+ * added pre-compiled exe files to `exe_releases/` folder
 
 ## [0.0.7] - 2018-04-23
 ### Changed

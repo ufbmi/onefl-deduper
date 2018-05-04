@@ -6,12 +6,12 @@ Goal: store application settings
 # Example:
 #   'patid': 'patid_column_name_from_the_actual_file'
 COLUMN_MAP = {
-    'patid': 'patid',
-    'first': 'first_name',
-    'last': 'last_name',
-    'dob': 'birth_date',
-    'race': 'race',
-    'sex': 'sex',
+    'patid': 'patid2',
+    'first': 'first_name2',
+    'last': 'last_name2',
+    'dob': 'birth_date2',
+    'race': 'race2',
+    'sex': 'sex2',
 }
 
 IN_DELIMITER = '\t'
